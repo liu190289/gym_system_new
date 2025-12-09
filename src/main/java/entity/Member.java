@@ -11,6 +11,7 @@ public class Member implements Person {
     private Date birthDate;
     private Date registerDate;
     private String status;//active/frozen/inactive
+    private double balance;
 
     public Member() {
     }
@@ -26,7 +27,7 @@ public class Member implements Person {
         this.status = status;//active/frozen/inactive
     }
 
-    public Member( String name, String phone, String email, String gender, Date birthDate, Date registerDate, String status) {
+    public Member(String name, String phone, String email, String gender, Date birthDate, Date registerDate, String status) {
         this.name = name;
         this.phone = phone;
         this.email = email;
@@ -104,17 +105,24 @@ public class Member implements Person {
     }
 
 
-
-    public String getRole(){
+    public String getRole() {
         return "Member";
     }
 
 
     @Override
     public String getBasicInfo() {
-        return id+" - "+name+" - "+phone+" - "+status+" - " + gender;
+        return id + " - " + name + " - " + phone + " - " + status + " - " + gender;
     }
 
+
+    public double getBalance() {
+        return balance;
+    }
+
+    public void setBalance(double balance) {
+        this.balance = balance;
+    }
 
     @Override
     public String toString() {

@@ -4,7 +4,7 @@ import entity.Member;
 import entity.Product;
 import service.MemberService;
 import service.ShopService;
-
+import service.ServiceResult;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
@@ -377,7 +377,7 @@ public class ShopUi extends JFrame {
         int memberId = (currentMember == null) ? 0 : currentMember.getId();
 
         // 3. 调用 Service
-        ShopService.ServiceResult<Void> result = shopService.checkout(memberId, shoppingCart);
+        ServiceResult<Void> result = shopService.checkout(memberId, shoppingCart);
 
         // 4. 处理结果
         if (result.isSuccess()) {

@@ -28,6 +28,9 @@ public class RegisterUi extends JFrame implements MouseListener {
     //创建密码输入
     JPasswordField passwordJTextField = new JPasswordField();
 
+    // >>> 新增：确认密码输入 <<<
+    JPasswordField confirmPasswordJTextField = new JPasswordField();
+
     //创建手机号输入
     JTextField phoneJTextField = new JTextField();
 
@@ -53,7 +56,7 @@ public class RegisterUi extends JFrame implements MouseListener {
     public void RegisterJFrame() {
         //在创建登录界面的时候,创建
 
-        this.setSize(500, 500);
+        this.setSize(500, 600);
 
 
         //设置界面标题
@@ -86,95 +89,100 @@ public class RegisterUi extends JFrame implements MouseListener {
             int verticalGap = 45;
             int startY = 50;
 
-            // 用户名
-            JLabel userJlabel = new JLabel("用户名");
-            userJlabel.setFont(new Font("微软雅黑", Font.BOLD, 16));
-            userJlabel.setBounds(leftMargin, startY, labelWidth, fieldHeight);
-            this.getContentPane().add(userJlabel);
+        // 密码
+        JLabel passwordJlabel = new JLabel("密码");
+        passwordJlabel.setFont(new Font("微软雅黑", Font.BOLD, 16));
+        passwordJlabel.setBounds(leftMargin, startY + verticalGap, labelWidth, fieldHeight);
+        this.getContentPane().add(passwordJlabel);
 
-            userJTextField.setBounds(leftMargin + labelWidth, startY, fieldWidth, fieldHeight);
-            userJTextField.setFont(new Font("微软雅黑", Font.PLAIN, 14));
-            this.getContentPane().add(userJTextField);
+        passwordJTextField.setBounds(leftMargin + labelWidth, startY + verticalGap, fieldWidth, fieldHeight);
+        passwordJTextField.setFont(new Font("微软雅黑", Font.PLAIN, 14));
+        this.getContentPane().add(passwordJTextField);
 
-            // 密码
-            JLabel passwordJlabel = new JLabel("密码");
-            passwordJlabel.setFont(new Font("微软雅黑", Font.BOLD, 16));
-            passwordJlabel.setBounds(leftMargin, startY + verticalGap, labelWidth, fieldHeight);
-            this.getContentPane().add(passwordJlabel);
+        // >>> 新增：确认密码 <<<
+        JLabel confirmPasswordJlabel = new JLabel("确认密码");
+        confirmPasswordJlabel.setFont(new Font("微软雅黑", Font.BOLD, 16));
+        confirmPasswordJlabel.setBounds(leftMargin, startY + verticalGap * 2, labelWidth, fieldHeight);
+        this.getContentPane().add(confirmPasswordJlabel);
 
-            passwordJTextField.setBounds(leftMargin + labelWidth, startY + verticalGap, fieldWidth, fieldHeight);
-            passwordJTextField.setFont(new Font("微软雅黑", Font.PLAIN, 14));
-            this.getContentPane().add(passwordJTextField);
+        confirmPasswordJTextField.setBounds(leftMargin + labelWidth, startY + verticalGap * 2, fieldWidth, fieldHeight);
+        confirmPasswordJTextField.setFont(new Font("微软雅黑", Font.PLAIN, 14));
+        this.getContentPane().add(confirmPasswordJTextField);
+        // >>> 新增结束 <<<
 
-            // 手机号
-            JLabel phoneJlabel = new JLabel("手机号");
-            phoneJlabel.setFont(new Font("微软雅黑", Font.BOLD, 16));
-            phoneJlabel.setBounds(leftMargin, startY + verticalGap * 2, labelWidth, fieldHeight);
-            this.getContentPane().add(phoneJlabel);
 
-            phoneJTextField.setBounds(leftMargin + labelWidth, startY + verticalGap * 2, fieldWidth, fieldHeight);
-            phoneJTextField.setFont(new Font("微软雅黑", Font.PLAIN, 14));
-            this.getContentPane().add(phoneJTextField);
+        // 手机号 (原先是 verticalGap * 2，现在是 * 3)
+        JLabel phoneJlabel = new JLabel("手机号");
+        phoneJlabel.setFont(new Font("微软雅黑", Font.BOLD, 16));
+        phoneJlabel.setBounds(leftMargin, startY + verticalGap * 3, labelWidth, fieldHeight);
+        this.getContentPane().add(phoneJlabel);
 
-            // 邮箱
-            JLabel emailJlabel = new JLabel("邮箱");
-            emailJlabel.setFont(new Font("微软雅黑", Font.BOLD, 16));
-            emailJlabel.setBounds(leftMargin, startY + verticalGap * 3, labelWidth, fieldHeight);
-            this.getContentPane().add(emailJlabel);
+        phoneJTextField.setBounds(leftMargin + labelWidth, startY + verticalGap * 3, fieldWidth, fieldHeight);
+        phoneJTextField.setFont(new Font("微软雅黑", Font.PLAIN, 14));
+        this.getContentPane().add(phoneJTextField);
 
-            emailJTextField.setBounds(leftMargin + labelWidth, startY + verticalGap * 3, fieldWidth, fieldHeight);
-            emailJTextField.setFont(new Font("微软雅黑", Font.PLAIN, 14));
-            this.getContentPane().add(emailJTextField);
+        // 邮箱 (原先是 * 3，现在是 * 4)
+        JLabel emailJlabel = new JLabel("邮箱");
+        emailJlabel.setFont(new Font("微软雅黑", Font.BOLD, 16));
+        emailJlabel.setBounds(leftMargin, startY + verticalGap * 4, labelWidth, fieldHeight);
+        this.getContentPane().add(emailJlabel);
 
-            // 性别
-            JLabel genderJlabel = new JLabel("性别");
-            genderJlabel.setFont(new Font("微软雅黑", Font.BOLD, 16));
-            genderJlabel.setBounds(leftMargin, startY + verticalGap * 4, labelWidth, fieldHeight);
-            this.getContentPane().add(genderJlabel);
+        emailJTextField.setBounds(leftMargin + labelWidth, startY + verticalGap * 4, fieldWidth, fieldHeight);
+        emailJTextField.setFont(new Font("微软雅黑", Font.PLAIN, 14));
+        this.getContentPane().add(emailJTextField);
 
-            genderComboBox.setBounds(leftMargin + labelWidth, startY + verticalGap * 4, fieldWidth, fieldHeight);
-            genderComboBox.setFont(new Font("微软雅黑", Font.PLAIN, 14));
-            genderComboBox.setSelectedIndex(0);
-            this.getContentPane().add(genderComboBox);
+        // 性别 (原先是 * 4，现在是 * 5)
+        JLabel genderJlabel = new JLabel("性别");
+        genderJlabel.setFont(new Font("微软雅黑", Font.BOLD, 16));
+        genderJlabel.setBounds(leftMargin, startY + verticalGap * 5, labelWidth, fieldHeight);
+        this.getContentPane().add(genderJlabel);
 
-            // 生日
-            JLabel birthdayJlabel = new JLabel("生日");
-            birthdayJlabel.setFont(new Font("微软雅黑", Font.BOLD, 16));
-            birthdayJlabel.setBounds(leftMargin, startY + verticalGap * 5, labelWidth, fieldHeight);
-            this.getContentPane().add(birthdayJlabel);
+        genderComboBox.setBounds(leftMargin + labelWidth, startY + verticalGap * 5, fieldWidth, fieldHeight);
+        genderComboBox.setFont(new Font("微软雅黑", Font.PLAIN, 14));
+        genderComboBox.setSelectedIndex(0);
+        this.getContentPane().add(genderComboBox);
 
-            birthdayChooser.setBounds(leftMargin + labelWidth, startY + verticalGap * 5, fieldWidth, fieldHeight);
-            birthdayChooser.setDateFormatString("yyyy-MM-dd");
-            birthdayChooser.setFont(new Font("微软雅黑", Font.PLAIN, 14));
-            this.getContentPane().add(birthdayChooser);
+        // 生日 (原先是 * 5，现在是 * 6)
+        JLabel birthdayJlabel = new JLabel("生日");
+        birthdayJlabel.setFont(new Font("微软雅黑", Font.BOLD, 16));
+        birthdayJlabel.setBounds(leftMargin, startY + verticalGap * 6, labelWidth, fieldHeight);
+        this.getContentPane().add(birthdayJlabel);
 
-            // 验证码
-            codeTextLabel.setFont(new Font("微软雅黑", Font.BOLD, 16));
-            codeTextLabel.setBounds(leftMargin, startY + verticalGap * 6, labelWidth, fieldHeight);
-            this.getContentPane().add(codeTextLabel);
+        birthdayChooser.setBounds(leftMargin + labelWidth, startY + verticalGap * 6, fieldWidth, fieldHeight);
+        birthdayChooser.setDateFormatString("yyyy-MM-dd");
+        birthdayChooser.setFont(new Font("微软雅黑", Font.PLAIN, 14));
+        this.getContentPane().add(birthdayChooser);
 
-            codeJTextField.setBounds(leftMargin + labelWidth, startY + verticalGap * 6, 120, fieldHeight);
-            codeJTextField.setFont(new Font("微软雅黑", Font.PLAIN, 14));
-            this.getContentPane().add(codeJTextField);
+        // 验证码 (原先是 * 6，现在是 * 7)
+        codeTextLabel.setFont(new Font("微软雅黑", Font.BOLD, 16));
+        codeTextLabel.setBounds(leftMargin, startY + verticalGap * 7, labelWidth, fieldHeight);
+        this.getContentPane().add(codeTextLabel);
 
-            generateJlabel.setFont(new Font("微软雅黑", Font.BOLD, 18));
-            generateJlabel.setForeground(Color.RED);
-            generateJlabel.setBounds(leftMargin + labelWidth + 130, startY + verticalGap * 6, 90, fieldHeight);
-            generateJlabel.addMouseListener(this);
-            this.getContentPane().add(generateJlabel);
+        codeJTextField.setBounds(leftMargin + labelWidth, startY + verticalGap * 7, 120, fieldHeight);
+        codeJTextField.setFont(new Font("微软雅黑", Font.PLAIN, 14));
+        this.getContentPane().add(codeJTextField);
 
-            // 注册按钮
-            register.addMouseListener(this);
-            register.setFont(new Font("微软雅黑", Font.BOLD, 16));
-            register.setBounds(leftMargin + labelWidth + 50, startY + verticalGap * 7, 120, 40);
-            this.getContentPane().add(register);
+        generateJlabel.setFont(new Font("微软雅黑", Font.BOLD, 18));
+        generateJlabel.setForeground(Color.RED);
+        generateJlabel.setBounds(leftMargin + labelWidth + 130, startY + verticalGap * 7, 90, fieldHeight);
+        generateJlabel.addMouseListener(this);
+        this.getContentPane().add(generateJlabel);
 
-            // 背景
-            JLabel backgroundJlabel = new JLabel();
-            backgroundJlabel.setBounds(0, 0, 488, 430);
-            backgroundJlabel.setBackground(new Color(220, 235, 250));
-            backgroundJlabel.setOpaque(true);
-            this.getContentPane().add(backgroundJlabel);
+        // 注册按钮 (原先是 * 7，现在是 * 8)
+        register.addMouseListener(this);
+        register.setFont(new Font("微软雅黑", Font.BOLD, 16));
+        register.setBounds(leftMargin + labelWidth + 50, startY + verticalGap * 8, 120, 40);
+        this.getContentPane().add(register);
+
+        // 背景需要拉高
+        JLabel backgroundJlabel = new JLabel();
+        backgroundJlabel.setBounds(0, 0, 488, 550); // 适当增加高度
+        backgroundJlabel.setBackground(new Color(220, 235, 250));
+        backgroundJlabel.setOpaque(true);
+        this.getContentPane().add(backgroundJlabel);
+
+
+
     }
 
     @Override
@@ -198,13 +206,22 @@ public class RegisterUi extends JFrame implements MouseListener {
             String code = codeJTextField.getText().trim();
             String genderDisplay = (String) genderComboBox.getSelectedItem();
             Date birthday = birthdayChooser.getDate();
-
+            String confirmPassword = new String(confirmPasswordJTextField.getPassword()).trim();
             // 基本验证
             if (name.isEmpty() || password.isEmpty() || phone.isEmpty() ||
                     email.isEmpty() || birthday == null) {
                 JOptionPane.showMessageDialog(this, "请填写所有必填信息！");
                 return;
             }
+
+            // >>> 核心验证：两次密码是否一致 <<<
+            if (!password.equals(confirmPassword)) {
+                JOptionPane.showMessageDialog(this, "两次输入的密码不一致，请重新输入！");
+                passwordJTextField.setText("");
+                confirmPasswordJTextField.setText("");
+                return;
+            }
+            // >>> 核心验证结束 <<<
 
             // 验证码检查
             if (!code.equalsIgnoreCase(generate)) {
@@ -214,6 +231,8 @@ public class RegisterUi extends JFrame implements MouseListener {
                 generateJlabel.setText(generate);
                 return;
             }
+
+
 
             // 性别转换：UI显示"男"/"女" -> 数据库需要 "male"/"female"
             String gender = "男".equals(genderDisplay) ? "male" : "female";

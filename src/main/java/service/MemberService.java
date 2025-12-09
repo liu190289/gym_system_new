@@ -8,7 +8,7 @@ import dao.OrderDAO;
 import entity.Member;
 import entity.MembershipCard;
 import utils.DateUtils;
-
+import service.ServiceResult;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -103,54 +103,155 @@ public class MemberService {
         }
     }
 
+    // ==================== 1. 开卡业务 (仅限现金/外部支付) ====================
+
     /**
-     * 会员注册并开卡（一站式服务）
-     * 
-     * @param name      姓名
-     * @param phone     手机号
-     * @param email     邮箱
-     * @param gender    性别（male/female）
-     * @param birthDate 出生日期
-     * @param cardType  卡类型（1=月卡，2=年卡）
-     * @return 注册结果
+     * 会员购买会员卡 (开卡)
+     * 场景：前台/管理员操作，默认为现金/扫码支付，不扣除会员余额。
+     * * @param memberId 会员ID
+     * @param cardType 卡类型 (1=月卡, 2=年卡)
+     * @param price    实收金额 (用于记账)
+     * @return 操作结果
      */
-    public ServiceResult<Member> registerWithCard(String name, String phone, String email,
-                                                   String gender, Date birthDate, int cardType) {
-        // 先注册会员
-        ServiceResult<Member> registerResult = register(name, phone, email, gender, birthDate);
-        if (!registerResult.isSuccess()) {
-            return registerResult;
+    public ServiceResult<Void> buyCard(int memberId, int cardType, double price) {
+        // 1. 验证会员是否存在
+        Member member = memberDAO.getMemberById(memberId);
+        if (member == null) {
+            return ServiceResult.failure("购买失败：会员不存在");
         }
 
-        Member member = registerResult.getData();
+        // 2. 检查是否已有卡
+        if (cardDAO.hasMemberValidCard(memberId)) {
+            return ServiceResult.failure("您当前已有有效的会员卡，无需重复购买！请使用续费功能。");
+        }
 
-        // 开卡
-        boolean cardCreated;
-        String cardTypeName;
+        // 3. 执行开卡 (数据库插入卡片记录)
+        boolean success = false;
+        String typeName = "";
+
         if (cardType == MembershipCardDAO.TYPE_MONTHLY) {
-            cardCreated = cardDAO.createMonthlyCard(member.getId());
-            cardTypeName = "月卡";
+            success = cardDAO.createMonthlyCard(memberId);
+            typeName = "月卡";
         } else if (cardType == MembershipCardDAO.TYPE_YEARLY) {
-            cardCreated = cardDAO.createYearlyCard(member.getId());
-            cardTypeName = "年卡";
+            success = cardDAO.createYearlyCard(memberId);
+            typeName = "年卡";
         } else {
-            // 卡类型无效，但会员已创建，返回成功但提示卡创建失败
-            return ServiceResult.success("会员注册成功，但开卡失败：无效的卡类型", member);
+            return ServiceResult.failure("无效的卡类型");
         }
 
-        if (cardCreated) {
-            return ServiceResult.success("注册成功，已开通" + cardTypeName, member);
+        if (success) {
+            // 4. 【关键新增】记录开卡收入订单 (Cash Payment)
+            try {
+                entity.Order order = new entity.Order();
+                order.setMemberId(memberId);
+                order.setOrderType("membership"); // 类型：会员卡
+                order.setAmount(price);           // 实收金额
+                order.setPaymentStatus("paid");   // 默认为已支付(现金/扫码)
+                order.setOrderTime(utils.DateUtils.now());
+
+                orderDAO.addOrder(order);
+            } catch (Exception e) {
+                System.err.println("警告：开卡成功但订单记录失败");
+            }
+
+            return ServiceResult.success("开卡成功！已开通 " + typeName);
         } else {
-            return ServiceResult.success("会员注册成功，但开卡失败", member);
+            return ServiceResult.failure("购买失败：数据库操作错误");
         }
     }
+
+    // ==================== 2. 注册并开卡 (一站式，现金支付) ====================
+
+    /**
+     * 注册的同时开卡 (需要传入价格以记录订单)
+     */
+    public ServiceResult<Member> registerWithCard(String name, String phone, String email,
+                                                  String gender, Date birthDate, int cardType, double price) {
+        // 1. 先注册
+        ServiceResult<Member> regResult = register(name, phone, email, gender, birthDate);
+        if (!regResult.isSuccess()) {
+            return regResult;
+        }
+        Member newMember = regResult.getData();
+
+        // 2. 再调用上面的 buyCard 方法 (复用逻辑)
+        ServiceResult<Void> buyResult = buyCard(newMember.getId(), cardType, price);
+
+        if (buyResult.isSuccess()) {
+            return ServiceResult.success("注册并开卡成功！", newMember);
+        } else {
+            return ServiceResult.success("会员注册成功，但开卡失败：" + buyResult.getMessage(), newMember);
+        }
+    }
+
+    // ==================== 3. 续费业务 (支持 余额 OR 现金) ====================
+
+    /**
+     * 会员卡续费
+     * 场景：
+     * - 用户端：只能传 useBalance=true
+     * - 前台端：可以选择 useBalance=true 或 false
+     * * @param memberId   会员ID
+     * @param days       续费天数
+     * @param price      续费价格
+     * @param useBalance true=扣余额, false=现金/其他
+     */
+    public ServiceResult<Void> renewMembership(int memberId, int days, double price, boolean useBalance) {
+        // 1. 基础验证
+        if (days <= 0 || price < 0) {
+            return ServiceResult.failure("续费参数错误");
+        }
+
+        Member member = memberDAO.getMemberById(memberId);
+        if (member == null) return ServiceResult.failure("会员不存在");
+
+        MembershipCard activeCard = cardDAO.getActiveMembershipCard(memberId);
+        if (activeCard == null) return ServiceResult.failure("当前无有效卡，请先开卡");
+
+        // 2. 支付逻辑
+        if (useBalance) {
+            // --- 余额支付 ---
+            if (member.getBalance() < price) {
+                return ServiceResult.failure("余额不足！当前: ¥" + member.getBalance());
+            }
+            // 扣余额
+            if (!memberDAO.updateBalance(memberId, member.getBalance() - price)) {
+                return ServiceResult.failure("扣款失败");
+            }
+        } else {
+            // --- 现金支付 ---
+            // 前台已收款，这里直接跳过扣余额，仅做记录
+        }
+
+        // 3. 延长有效期
+        if (cardDAO.extendValidity(activeCard.getCardId(), days)) {
+            // 4. 记账
+            try {
+                entity.Order order = new entity.Order();
+                order.setMemberId(memberId);
+                order.setOrderType("renewal");
+                order.setAmount(price);
+                order.setOrderTime(utils.DateUtils.now());
+                order.setPaymentStatus("paid"); // 无论余额还是现金，都算已支付
+                orderDAO.addOrder(order);
+            } catch (Exception e) { e.printStackTrace(); }
+
+            String payType = useBalance ? "余额支付" : "现金/线下支付";
+            return ServiceResult.success("续费成功 (" + payType + ")");
+        } else {
+            // 失败回滚
+            if (useBalance) memberDAO.updateBalance(memberId, member.getBalance());
+            return ServiceResult.failure("续费失败");
+        }
+    }
+
 
     /**
      * 会员注册并开月卡
      */
     public ServiceResult<Member> registerWithMonthlyCard(String name, String phone, String email,
                                                           String gender, Date birthDate) {
-        return registerWithCard(name, phone, email, gender, birthDate, MembershipCardDAO.TYPE_MONTHLY);
+        return registerWithCard(name, phone, email, gender, birthDate, MembershipCardDAO.TYPE_MONTHLY,MembershipCardDAO.PRICE_MONTHLY);
     }
 
     /**
@@ -158,7 +259,7 @@ public class MemberService {
      */
     public ServiceResult<Member> registerWithYearlyCard(String name, String phone, String email,
                                                          String gender, Date birthDate) {
-        return registerWithCard(name, phone, email, gender, birthDate, MembershipCardDAO.TYPE_YEARLY);
+        return registerWithCard(name, phone, email, gender, birthDate, MembershipCardDAO.TYPE_YEARLY,MembershipCardDAO.PRICE_YEARLY);
     }
 
     // ==================== 会员信息管理 ====================

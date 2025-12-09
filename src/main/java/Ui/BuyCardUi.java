@@ -113,20 +113,31 @@ public class BuyCardUi extends JFrame {
     }
 
     private void performBuy(int cardType, String cardName) {
+        double price = 0.0;
+        if (cardType == dao.MembershipCardDAO.TYPE_MONTHLY) {
+            price = MembershipCardDAO.PRICE_MONTHLY;  // 月卡价格
+        } else if (cardType == dao.MembershipCardDAO.TYPE_YEARLY) {
+            price = MembershipCardDAO.PRICE_YEARLY; // 年卡价格
+        }
+
+        // 2. 弹窗提示时，把价格也显示出来，更专业
         int confirm = JOptionPane.showConfirmDialog(this,
-                "确定要购买 " + cardName + " 吗？\n(模拟支付：购买将立即生效)",
+                "确定要购买 " + cardName + " 吗？\n" +
+                        "应付金额：¥" + price + "\n" +
+                        "(模拟支付：现金/扫码已收款)",
                 "确认购买", JOptionPane.YES_NO_OPTION);
 
         if (confirm == JOptionPane.YES_OPTION) {
-            MemberService.ServiceResult<Void> result = memberService.buyCard(member.getId(), cardType);
+
+            // 3. 【关键修改】调用带 price 参数的新方法
+            service.MemberService.ServiceResult<Void> result = memberService.buyCard(member.getId(), cardType, price);
 
             if (result.isSuccess()) {
-                JOptionPane.showMessageDialog(this, "支付成功！\n" + result.getMessage());
-                this.dispose(); // 关闭购买界面
-                // 重新打开自己以刷新状态，或者直接关闭让用户回主页
-                new BuyCardUi(member);
+                JOptionPane.showMessageDialog(this, "✅ 支付成功！\n" + result.getMessage());
+                this.dispose(); // 关闭当前窗口
+                // 可选：如果需要刷新状态，可以重新加载
             } else {
-                JOptionPane.showMessageDialog(this, result.getMessage(), "购买失败", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this, "❌ " + result.getMessage(), "购买失败", JOptionPane.ERROR_MESSAGE);
             }
         }
     }

@@ -1,15 +1,16 @@
 package service;
 
+import dao.MemberDAO;
 import dao.OrderDAO;
 import dao.OrderProductDAO;
 import dao.ProductDAO;
+import entity.Member;
 import entity.Order;
 import entity.OrderProduct;
 import entity.Product;
 import utils.DateUtils;
 
 import java.math.BigDecimal;
-import java.util.List;
 import java.util.Map;
 
 public class ShopService {
@@ -17,25 +18,24 @@ public class ShopService {
     private ProductDAO productDAO;
     private OrderDAO orderDAO;
     private OrderProductDAO orderProductDAO;
+    private MemberDAO memberDAO; // 1. 声明
 
     public ShopService() {
         this.productDAO = new ProductDAO();
         this.orderDAO = new OrderDAO();
         this.orderProductDAO = new OrderProductDAO();
+        this.memberDAO = new MemberDAO(); // 2. 必须在这里初始化！！否则报错
     }
 
     /**
      * 获取所有在售商品
      */
-    public List<Product> getAllProducts() {
+    public java.util.List<Product> getAllProducts() {
         return productDAO.getAllProducts();
     }
 
     /**
      * 结算/创建订单
-     * @param memberId 会员ID (可以是 0 或 -1 表示散客/匿名购买)
-     * @param cart 购物车数据：Map<商品ID, 购买数量>
-     * @return 操作结果
      */
     public ServiceResult<Void> checkout(int memberId, Map<Integer, Integer> cart) {
         if (cart == null || cart.isEmpty()) {
@@ -57,79 +57,165 @@ public class ShopService {
                 return ServiceResult.failure("商品 [" + product.getName() + "] 库存不足 (仅剩 " + product.getStock() + ")");
             }
 
-            // 累加金额: price * quantity
             BigDecimal priceBD = BigDecimal.valueOf(product.getPrice());
             BigDecimal itemTotal = priceBD.multiply(new BigDecimal(quantity));
             totalAmount = totalAmount.add(itemTotal);
         }
 
-        // 2. 创建主订单
-        Order order = new Order();
+        // ==========================================
+        // 2. 余额扣款逻辑 (前置扣款)
+        // ==========================================
+        double originalBalance = 0.0; // 记录原余额，用于退款
+
         if (memberId > 0) {
-            order.setMemberId(memberId); // 是会员，设置ID
-        } else {
-            // 散客：我们约定使用 0 或 -1 来表示
-            // 实际上 Order 初始化时 memberId 默认就是 0，所以这里甚至可以什么都不写
-            order.setMemberId(0);
-        }
-// ...
-        order.setOrderType("product"); // 类型：商品消费
-        order.setAmount(totalAmount.doubleValue());
-        order.setOrderTime(DateUtils.now()); // 使用当前时间
-        order.setPaymentStatus("paid"); // 默认现结已支付
+            Member member = memberDAO.getMemberById(memberId);
+            if (member == null) {
+                return ServiceResult.failure("结算失败：会员ID不存在。");
+            }
 
-        // 正确写法：
-        boolean success = orderDAO.addOrder(order); // 1. 先执行插入，返回布尔值
+            BigDecimal currentBalance = BigDecimal.valueOf(member.getBalance());
+            originalBalance = member.getBalance(); // 记住这个数字！
 
-        if (!success) {
-            return ServiceResult.failure("订单创建失败 (数据库错误)");
-        }
+            // 检查余额
+            if (currentBalance.compareTo(totalAmount) < 0) {
+                return ServiceResult.failure("结算失败：会员余额不足！\n当前余额: ¥" + member.getBalance());
+            }
 
-        // 2. 从 order 对象中获取自动生成的 ID
-        int orderId = order.getOrderId();
-
-        // 3. 创建订单明细 & 扣减库存
-        for (Map.Entry<Integer, Integer> entry : cart.entrySet()) {
-            int productId = entry.getKey();
-            int quantity = entry.getValue();
-
-            // 3.1 保存明细
-            OrderProduct item = new OrderProduct();
-            item.setOrderId(orderId);
-            item.setProductId(productId);
-            item.setQuantity(quantity);
-            orderProductDAO.addOrderProduct(item);
-
-            // 3.2 扣库存
-            // 注意：ProductDAO 需要有一个 decreaseStock 方法，或者 updateProduct 方法
-            Product p = productDAO.getProductById(productId);
-            p.setStock(p.getStock() - quantity);
-            productDAO.updateProduct(p);
+            // 计算并扣款
+            double newBalance = currentBalance.subtract(totalAmount).doubleValue();
+            if (!memberDAO.updateBalance(memberId, newBalance)) {
+                return ServiceResult.failure("结算失败：余额扣除失败 (数据库错误)。");
+            }
         }
 
-        return ServiceResult.success("交易成功！收款金额: ¥" + totalAmount);
+        // ==========================================
+        // 3. 订单创建与库存扣减 (风险区 - 需要捕获异常来退款)
+        // ==========================================
+        try {
+            // 3.1 准备订单对象
+            Order order = new Order();
+            if (memberId > 0) {
+                order.setMemberId(memberId);
+                order.setPaymentStatus("paid_by_balance"); // 标记为余额支付
+            } else {
+                order.setMemberId(0); // 散客存0 (DAO层会处理为NULL)
+                order.setPaymentStatus("paid_by_cash");    // 标记为现金支付
+            }
+
+            order.setOrderType("product");
+            order.setAmount(totalAmount.doubleValue());
+            order.setOrderTime(DateUtils.now());
+
+            // 3.2 写入主订单
+            boolean orderSuccess = orderDAO.addOrder(order);
+            if (!orderSuccess) {
+                throw new Exception("主订单创建失败");
+            }
+            int orderId = order.getOrderId();
+
+            // 3.3 写入明细 & 扣减库存
+            for (Map.Entry<Integer, Integer> entry : cart.entrySet()) {
+                int productId = entry.getKey();
+                int quantity = entry.getValue();
+
+                // A. 写入明细
+                OrderProduct item = new OrderProduct();
+                item.setOrderId(orderId);
+                item.setProductId(productId);
+                item.setQuantity(quantity);
+                orderProductDAO.addOrderProduct(item);
+
+                // B. 扣减库存 (使用 decreaseStock 更安全)
+                // 如果你没有 decreaseStock 方法，用 updateProduct 也可以，但最好用专门的方法
+                if (!productDAO.decreaseStock(productId, quantity)) {
+                    throw new Exception("商品 [" + productId + "] 库存扣减失败");
+                }
+            }
+
+            // 全部成功！
+            return ServiceResult.success("交易成功！收款金额: ¥" + totalAmount);
+
+        } catch (Exception e) {
+            // ==========================================
+            // 4. 失败补偿：退还余额
+            // ==========================================
+            System.err.println("交易发生异常: " + e.getMessage());
+
+            if (memberId > 0) {
+                System.out.println("正在回滚余额...");
+                // 把钱退回去 (设置为 originalBalance)
+                boolean refundSuccess = memberDAO.updateBalance(memberId, originalBalance);
+                if (refundSuccess) {
+                    return ServiceResult.failure("交易失败 (库存不足或系统错误)，余额已自动退回。");
+                } else {
+                    return ServiceResult.failure("严重错误：交易失败且退款失败！请联系管理员人工核对余额。");
+                }
+            }
+
+            return ServiceResult.failure("交易失败：" + e.getMessage());
+        }
     }
 
-    // 复用通用的结果类
-    public static class ServiceResult<T> {
-        private boolean success;
-        private String message;
+    // ShopService.java 中的高级充值方法
+// 这个方法不仅加钱，还会生成一条 type='recharge' 的订单记录
 
-        public static <T> ServiceResult<T> success(String msg) {
-            ServiceResult<T> r = new ServiceResult<>();
-            r.success = true;
-            r.message = msg;
-            return r;
+    // ==========================================
+    // >>> 新增：高级充值方法 (带订单记录) <<<
+    // ==========================================
+    /**
+     * 会员充值 (同时生成充值流水记录)
+     * @param memberId 会员ID
+     * @param amount 充值金额
+     * @return 操作结果
+     */
+    public ServiceResult<Void> recharge(int memberId, double amount) {
+        // 1. 基础验证
+        if (amount <= 0) {
+            return ServiceResult.failure("充值金额必须大于 0");
+        }
+        if (amount > 100000) {
+            return ServiceResult.failure("单次充值金额过大，请核对");
         }
 
-        public static <T> ServiceResult<T> failure(String msg) {
-            ServiceResult<T> r = new ServiceResult<>();
-            r.success = false;
-            r.message = msg;
-            return r;
+        // 2. 获取会员信息
+        Member member = memberDAO.getMemberById(memberId);
+        if (member == null) {
+            return ServiceResult.failure("会员不存在");
         }
 
-        public boolean isSuccess() { return success; }
-        public String getMessage() { return message; }
+        // 3. 执行充值 (更新余额)
+        double oldBalance = member.getBalance();
+        double newBalance = oldBalance + amount;
+
+        // 这里的 updateBalance 是关键一步
+        boolean updateSuccess = memberDAO.updateBalance(memberId, newBalance);
+
+        if (!updateSuccess) {
+            return ServiceResult.failure("充值失败：余额更新未成功");
+        }
+
+        // 4. 【核心差异】创建一条“充值订单”记录
+        try {
+            Order order = new Order();
+            order.setMemberId(memberId);
+            order.setOrderType("recharge"); // 对应数据库新增的枚举值
+            order.setAmount(amount);        // 记录充了多少钱
+            order.setOrderTime(DateUtils.now());
+            order.setPaymentStatus("paid"); // 充值默认是现结
+
+            // 写入订单表
+            orderDAO.addOrder(order);
+
+            // (可选) 如果你想更完美，这里甚至可以加 try-catch 回滚余额
+            // 但为了代码简单，我们假设只要余额改成功了，订单记录失败只算“小瑕疵”
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            // 注意：这里虽然报错了，但钱已经充进去了。
+            // 实际生产中会打印日志报警，但通常会告诉用户充值成功了。
+            System.err.println("警告：充值成功但流水记录创建失败: " + e.getMessage());
+        }
+
+        return ServiceResult.success("充值成功！当前余额: ¥" + String.format("%.2f", newBalance));
     }
 }

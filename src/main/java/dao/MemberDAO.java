@@ -69,6 +69,7 @@ public class MemberDAO {
         member.setBirthDate(rs.getDate("birth_date"));
         member.setRegisterDate(rs.getTimestamp("register_date"));
         member.setStatus(rs.getString("status"));
+        member.setBalance(rs.getDouble("balance"));
         return member;
     }
 
@@ -323,6 +324,33 @@ public class MemberDAO {
         }
         return members;
     }
+
+    /**
+     * 更新指定会员的余额
+     * @param memberId 会员ID
+     * @param newBalance 新的余额值
+     * @return 是否更新成功
+     */
+    public boolean updateBalance(int memberId, double newBalance) {
+        String sql = "UPDATE member SET balance = ? WHERE member_id = ?";
+
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            // 确保使用 DECIMAL 精度
+            // 注意：如果你在 Member 实体里用的是 double，这里直接设 double
+            pstmt.setDouble(1, newBalance);
+            pstmt.setInt(2, memberId);
+
+            return pstmt.executeUpdate() > 0;
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+
 
     /**
      * 获取拥有有效会员卡的会员

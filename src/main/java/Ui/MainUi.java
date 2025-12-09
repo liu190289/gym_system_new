@@ -33,6 +33,7 @@ public class MainUi extends JFrame implements MouseListener {
     private JButton checkInBtn = new JButton("进场签到");
     private JButton courseManageBtn = new JButton("排课管理");
     private JButton memberManageBtn = new JButton("会员管理");
+    private JButton productManageBtn = new JButton("商品/库存管理");
 
     // 3. 管理员专用 (人事功能)
     private JButton employeeManageBtn = new JButton("员工/人事管理");
@@ -50,7 +51,7 @@ public class MainUi extends JFrame implements MouseListener {
 
     private void initView() {
         // 1. 基础窗口设置
-        this.setSize(900, 600);
+        this.setSize(900, 700);
         this.setTitle("健身房管理系统 - 主页");
         this.setLocationRelativeTo(null); // 居中
         this.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
@@ -89,7 +90,7 @@ public class MainUi extends JFrame implements MouseListener {
 
         // 5. 设置背景
         JLabel background = new JLabel();
-        background.setBounds(0, 0, 900, 600);
+        background.setBounds(0, 0, 900, 700);
         background.setBackground(new Color(225, 240, 255)); // 淡蓝色背景
         background.setOpaque(true);
         this.getContentPane().add(background);
@@ -105,36 +106,42 @@ public class MainUi extends JFrame implements MouseListener {
         int btnHeight = 60;
         int gap = 40;
 
-        // 第一排按钮
-        // 1. 个人信息
+        // --- 第一排 ---
         myProfileBtn.setFont(new Font("微软雅黑", Font.BOLD, 14));
         myProfileBtn.setBounds(startX, startY, btnWidth, btnHeight);
         myProfileBtn.addMouseListener(this);
         this.getContentPane().add(myProfileBtn);
 
-        // 2. 预约课程
         bookCourseBtn.setFont(new Font("微软雅黑", Font.BOLD, 14));
         bookCourseBtn.setBounds(startX + btnWidth + gap, startY, btnWidth, btnHeight);
         bookCourseBtn.addMouseListener(this);
         this.getContentPane().add(bookCourseBtn);
 
-        // 3. 我的预约
         myBookingsBtn.setFont(new Font("微软雅黑", Font.BOLD, 14));
         myBookingsBtn.setBounds(startX + (btnWidth + gap) * 2, startY, btnWidth, btnHeight);
         myBookingsBtn.addMouseListener(this);
         this.getContentPane().add(myBookingsBtn);
 
-        // 第二排按钮
-        // 4. 购买会员卡
-        buyCardBtn.setFont(new Font("微软雅黑", Font.BOLD, 14));
-        buyCardBtn.setBackground(new Color(255, 215, 0)); // 金色
-        buyCardBtn.setBounds(startX, startY + btnHeight + gap, btnWidth, btnHeight);
-        buyCardBtn.addMouseListener(this);
-        this.getContentPane().add(buyCardBtn);
+        // --- 第二排：仅保留续费入口 ---
+        JButton myCardBtn = new JButton("会员卡/续费");
+        myCardBtn.setFont(new Font("微软雅黑", Font.BOLD, 14));
+        myCardBtn.setBackground(new Color(255, 215, 0)); // 金色
+        myCardBtn.setBounds(startX, startY + btnHeight + gap, btnWidth, btnHeight);
 
-        //商品售卖
-
-
+        myCardBtn.addActionListener(e -> {
+            Member mem = (Member) userData;
+            dao.MembershipCardDAO cardDAO = new dao.MembershipCardDAO();
+            if (cardDAO.hasMemberValidCard(mem.getId())) {
+                // 有卡 -> 续费 (isStaff=false: 只能余额支付)
+                new RenewUi(this, mem, false);
+            } else {
+                // 没卡 -> 提示去前台
+                JOptionPane.showMessageDialog(this,
+                        "您当前没有有效的会员卡。\n请前往前台柜台办理开卡业务！",
+                        "提示", JOptionPane.INFORMATION_MESSAGE);
+            }
+        });
+        this.getContentPane().add(myCardBtn);
     }
 
     // ==================== 员工菜单加载 (权限分离) ====================
@@ -188,6 +195,39 @@ public class MainUi extends JFrame implements MouseListener {
             shopBtn.setBounds(x, y2, w, h); // 放在第二排第一个
             shopBtn.addActionListener(e -> new ShopUi());
             this.getContentPane().add(shopBtn);
+
+            // >>> 新增：余额充值 (放在商品售卖旁边) <<<
+            JButton rechargeBtn = new JButton("会员充值 (Cash)");
+            rechargeBtn.setFont(new Font("微软雅黑", Font.BOLD, 14));
+            rechargeBtn.setBackground(new Color(144, 238, 144)); // 浅绿色，代表进账
+            rechargeBtn.setBounds(x + w + gap, y2, w, h);
+            rechargeBtn.addActionListener(e -> new RechargeUi()); // 点击打开充值界面
+            this.getContentPane().add(rechargeBtn);
+
+            // >>> 新增：库存管理按钮 <<<
+            productManageBtn.setBounds(x + w + gap, y2, w, h); // 放在第二排第二个
+            productManageBtn.addMouseListener(this); // 关联事件
+            this.getContentPane().add(productManageBtn);
+
+
+            // 第三排：会籍业务 (新增)
+            int y3 = y2 + h + gap;
+
+            // 新会员开卡
+            JButton openCardBtn = new JButton("新会员开卡");
+            openCardBtn.setBackground(new Color(255, 215, 0)); // 金色
+            openCardBtn.setBounds(x, y3, w, h);
+            openCardBtn.addActionListener(e -> handleStaffCardAction("buy"));
+            this.getContentPane().add(openCardBtn);
+
+            // 老会员续费
+            JButton staffRenewBtn = new JButton("会员续费");
+            staffRenewBtn.setBackground(new Color(255, 215, 0));
+            staffRenewBtn.setBounds(x + w + gap, y3, w, h);
+            staffRenewBtn.addActionListener(e -> handleStaffCardAction("renew"));
+            this.getContentPane().add(staffRenewBtn);
+
+
         }
 
         // 3. 管理员权限 (Admin)
@@ -195,32 +235,86 @@ public class MainUi extends JFrame implements MouseListener {
         else if (roleId == EmployeeRoleDAO.ROLE_ID_ADMIN) {
             addSectionLabel("综合管理 (管理员)", x, y - 40);
 
-            // 第一排：业务运营
+            // === 第一排：基础运营 (y) ===
+            // 1. 进场签到
             checkInBtn.setBounds(x, y, w, h);
             checkInBtn.addMouseListener(this);
             this.getContentPane().add(checkInBtn);
 
+            // 2. 排课管理
             courseManageBtn.setBounds(x + w + gap, y, w, h);
             courseManageBtn.addMouseListener(this);
             this.getContentPane().add(courseManageBtn);
 
+            // 3. 会员管理
             memberManageBtn.setBounds(x + (w + gap) * 2, y, w, h);
             memberManageBtn.addMouseListener(this);
             this.getContentPane().add(memberManageBtn);
 
-            // 第二排：高级管理 & 教学
+            // === 第二排：内部管理 (y2) ===
             int y2 = y + h + gap;
 
+            // 1. 上课点名
             courseCheckInBtn.setText("上课点名 (代教)");
             courseCheckInBtn.setBounds(x, y2, w, h);
             courseCheckInBtn.addMouseListener(this);
             this.getContentPane().add(courseCheckInBtn);
 
+            // 2. 员工管理
             employeeManageBtn.setText("员工/人事管理");
-            employeeManageBtn.setBackground(new Color(255, 150, 150)); // 特殊颜色
+            employeeManageBtn.setBackground(new Color(255, 150, 150)); // 淡红
             employeeManageBtn.setBounds(x + w + gap, y2, w, h);
             employeeManageBtn.addMouseListener(this);
             this.getContentPane().add(employeeManageBtn);
+
+            // 3. 库存管理
+            productManageBtn.setText("商品/库存管理");
+            productManageBtn.setBackground(new Color(249, 126, 11)); // 橙色
+            productManageBtn.setBounds(x + (w + gap) * 2, y2, w, h);
+            productManageBtn.addMouseListener(this);
+            this.getContentPane().add(productManageBtn);
+
+            // === 第三排：收银与会籍 (y3) ===
+            int y3 = y2 + h + gap;
+
+            // 1. 商品售卖
+            JButton shopBtn = new JButton("商品售卖 (POS)");
+            shopBtn.setBounds(x, y3, w, h);
+            shopBtn.addActionListener(e -> new ShopUi());
+            this.getContentPane().add(shopBtn);
+
+            // 2. 余额充值
+            JButton rechargeBtn = new JButton("余额充值 (Cash)");
+            rechargeBtn.setBackground(new Color(144, 238, 144)); // 浅绿
+            rechargeBtn.setBounds(x + w + gap, y3, w, h);
+            rechargeBtn.addActionListener(e -> new RechargeUi());
+            this.getContentPane().add(rechargeBtn);
+
+            // 3. 开卡/续费 (合并入口)
+            JButton cardOpBtn = new JButton("开卡/续费办理");
+            cardOpBtn.setBackground(new Color(255, 215, 0)); // 金色
+            cardOpBtn.setBounds(x + (w + gap) * 2, y3, w, h);
+            cardOpBtn.addActionListener(e -> {
+                String[] options = {"新会员开卡", "老会员续费"};
+                int choice = JOptionPane.showOptionDialog(this, "请选择业务类型:", "会籍业务",
+                        JOptionPane.DEFAULT_OPTION, JOptionPane.INFORMATION_MESSAGE, null, options, options[0]);
+                if (choice == 0) handleStaffCardAction("buy");
+                if (choice == 1) handleStaffCardAction("renew");
+            });
+            this.getContentPane().add(cardOpBtn);
+
+            // === 第四排：数据报表 (y4) ===
+            int y4 = y3 + h + gap;
+
+            // 1. 经营数据报表
+            JButton reportBtn = new JButton("经营数据报表");
+            reportBtn.setFont(new Font("微软雅黑", Font.BOLD, 14));
+            reportBtn.setBackground(new Color(100, 149, 237)); // 矢车菊蓝
+            reportBtn.setForeground(Color.WHITE);
+            // 让它宽一点，或者放在第一个位置
+            reportBtn.setBounds(x, y4, w, h);
+            reportBtn.addActionListener(e -> new ReportUi());
+            this.getContentPane().add(reportBtn);
         }
     }
 
@@ -258,12 +352,7 @@ public class MainUi extends JFrame implements MouseListener {
             if (userData instanceof Member) {
                 new Ui.MyBookingUi((Member) userData);
             }
-        } else if (e.getSource() == buyCardBtn) {
-            if (userData instanceof Member) {
-                new Ui.BuyCardUi((Member) userData);
-            }
         }
-
         // --- 员工功能 ---
         // 1. 进场签到 (前台/管理员)
         else if (e.getSource() == checkInBtn) {
@@ -289,6 +378,10 @@ public class MainUi extends JFrame implements MouseListener {
         else if (e.getSource() == employeeManageBtn) {
             new Ui.EmployeeManageUi();
         }
+        // >>> 新增：商品/库存管理事件 <<<
+        else if (e.getSource() == productManageBtn) {
+            new ProductManageUi(); // 点击打开库存管理界面
+        }
     }
 
     @Override
@@ -299,4 +392,35 @@ public class MainUi extends JFrame implements MouseListener {
     public void mouseEntered(MouseEvent e) {}
     @Override
     public void mouseExited(MouseEvent e) {}
+
+    // ========== 辅助方法：处理员工的开卡/续费逻辑 ==========
+    // 避免代码重复，把搜索逻辑提出来
+    private void handleStaffCardAction(String actionType) {
+        String input = JOptionPane.showInputDialog(this, "请输入会员手机号或ID:");
+        if (input == null || input.trim().isEmpty()) return;
+
+        service.MemberService ms = new service.MemberService();
+        java.util.List<Member> list = ms.search(input);
+
+        if (list.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "未找到该会员！请先在「会员管理」中注册。");
+            return;
+        }
+
+        Member targetMember = list.get(0); // 默认选第一个
+
+        if ("buy".equals(actionType)) {
+            // 开卡逻辑
+            dao.MembershipCardDAO cardDAO = new dao.MembershipCardDAO();
+            if (cardDAO.hasMemberValidCard(targetMember.getId())) {
+                JOptionPane.showMessageDialog(this, "该会员已有有效卡！请使用续费功能。");
+            } else {
+                new Ui.BuyCardUi(targetMember); // 打开开卡界面
+            }
+        } else if ("renew".equals(actionType)) {
+            // 续费逻辑 (isStaff = true)
+            new RenewUi(this, targetMember, true);
+        }
+    }
 }
+
