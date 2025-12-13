@@ -205,6 +205,36 @@ public class CourseDAO {
         return courses;
     }
 
+
+    // ==================== [新增] 核心修复：查询教练今日课程 ====================
+
+    /**
+     * 查询某教练【今天】的所有课程
+     *
+     * @param employeeId 教练ID
+     * @return 今日课程列表
+     */
+    public List<Course> getTodayCoursesByEmployeeId(int employeeId) {
+        List<Course> courses = new ArrayList<>();
+        // 使用 SQL 函数 DATE() 和 CURDATE() 进行日期匹配，忽略具体时间
+        String sql = "SELECT * FROM course WHERE employee_id = ? AND DATE(course_time) = CURDATE() ORDER BY course_time";
+
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setInt(1, employeeId);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    courses.add(extractCourseFromResultSet(rs));
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return courses;
+    }
+
+
     // ==================== 添加课程 ====================
 
     /**

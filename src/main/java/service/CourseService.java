@@ -59,6 +59,17 @@ public class CourseService {
         this.employeeDAO = new EmployeeDAO();
     }
 
+    // ==================== [新增] 获取今日课程 ====================
+
+    /**
+     * 获取教练今天的课程
+     */
+    public List<Course> getTrainerCoursesToday(int trainerId) {
+        return courseDAO.getTodayCoursesByEmployeeId(trainerId);
+    }
+
+
+
     // ==================== 课程创建 ====================
 
     /**

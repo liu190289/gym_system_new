@@ -3,32 +3,41 @@ package Ui;
 import dao.EmployeeRoleDAO;
 import entity.Employee;
 import entity.Member;
-import utils.StyleUtils; // 确保引入了样式工具类
+import utils.LanguageUtils;
+import utils.StyleUtils;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 public class MainUi extends JFrame {
 
     private String userType;
     private Object userData;
+    private JLabel timeLbl;
+    private Timer timer;
+
+    // === 布局常量配置 ===
+    private final int WIN_WIDTH = 1000;
+    private final int BTN_W = 180;   // 按钮宽度
+    private final int BTN_H = 100;   // 按钮高度 (稍微加高)
+    private final int GAP_X = 40;    // 水平间距
+    private final int GAP_Y = 140;   // 垂直行距 (包含标题空间)
+    private final int START_Y = 150; // 第一行按钮的起始Y坐标
 
     public MainUi(String userType, Object userData) {
         this.userType = userType;
         this.userData = userData;
-
-        // 1. 初始化全局皮肤
         StyleUtils.initGlobalTheme();
-
         initView();
     }
 
     private void initView() {
-        // 窗口设置 (稍微加高一点以适应分区)
-        this.setSize(1000, 750);
-        this.setTitle("💪 健身房智能管理系统 Pro");
+        this.setSize(WIN_WIDTH, 750);
+        this.setTitle("💪 " + LanguageUtils.getText("main.title"));
         this.setLocationRelativeTo(null);
         this.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
         this.getContentPane().setLayout(null);
@@ -36,7 +45,7 @@ public class MainUi extends JFrame {
 
         // ================= 顶部导航栏 =================
         JPanel header = new JPanel(null);
-        header.setBounds(0, 0, 1000, 70);
+        header.setBounds(0, 0, WIN_WIDTH, 70);
         header.setBackground(Color.WHITE);
         this.getContentPane().add(header);
 
@@ -44,41 +53,54 @@ public class MainUi extends JFrame {
         JLabel logo = new JLabel("🏋️ Gym System");
         logo.setFont(StyleUtils.FONT_TITLE_BIG);
         logo.setForeground(StyleUtils.COLOR_PRIMARY);
-        logo.setBounds(30, 15, 250, 40);
+        logo.setBounds(20, 15, 220, 40);
         header.add(logo);
 
+        // 时间显示
+        timeLbl = new JLabel();
+        timeLbl.setFont(new Font("Monospaced", Font.BOLD, 16));
+        timeLbl.setForeground(new Color(100, 100, 100));
+        timeLbl.setBounds(250, 20, 200, 30);
+        header.add(timeLbl);
+        startClock();
+
         // 用户信息
-        String welcomeText = "欢迎，访客";
+        String welcomeText = LanguageUtils.getText("main.welcome");
         if ("member".equals(userType) && userData instanceof Member) {
-            welcomeText = "👋 欢迎回来，" + ((Member) userData).getName() + " (会员)";
+            welcomeText += ((Member) userData).getName();
         } else if ("employee".equals(userType) && userData instanceof Employee) {
-            welcomeText = "👋 工作愉快，" + ((Employee) userData).getName() + " (" + ((Employee) userData).getRole() + ")";
+            welcomeText += ((Employee) userData).getName();
         }
         JLabel userLbl = new JLabel(welcomeText);
         userLbl.setFont(StyleUtils.FONT_NORMAL);
         userLbl.setHorizontalAlignment(SwingConstants.RIGHT);
-        userLbl.setBounds(500, 20, 300, 30);
+        userLbl.setBounds(460, 20, 240, 30);
         header.add(userLbl);
 
-        // 退出按钮
-        JButton logoutBtn = new JButton("退出 ❌");
+        // 语言切换
+        JButton langBtn = LanguageUtils.createLanguageButton(this, () -> new MainUi(userType, userData));
+        langBtn.setBounds(710, 18, 80, 35);
+        header.add(langBtn);
+
+        // 退出
+        JButton logoutBtn = new JButton(LanguageUtils.getText("main.logout") + " ❌");
         StyleUtils.styleButton(logoutBtn, StyleUtils.COLOR_DANGER);
-        logoutBtn.setBounds(820, 18, 100, 35);
+        logoutBtn.setBounds(800, 18, 160, 35);
         logoutBtn.addActionListener(e -> {
-            if (JOptionPane.showConfirmDialog(this, "确定退出吗?", "退出", JOptionPane.YES_NO_OPTION) == 0) {
+            if (JOptionPane.showConfirmDialog(this, LanguageUtils.getText("main.exit_confirm"), LanguageUtils.getText("main.logout"), JOptionPane.YES_NO_OPTION) == 0) {
+                if (timer != null) timer.stop();
                 dispose();
                 new LoginUi().LoginJFrame();
             }
         });
         header.add(logoutBtn);
 
-        // 分割线
         JSeparator sep = new JSeparator();
-        sep.setBounds(0, 70, 1000, 1);
+        sep.setBounds(0, 70, WIN_WIDTH, 1);
         sep.setForeground(Color.LIGHT_GRAY);
         this.getContentPane().add(sep);
 
-        // ================= 菜单加载 =================
+        // ================= 加载菜单 =================
         if ("member".equals(userType)) {
             loadMemberMenu();
         } else if ("employee".equals(userType)) {
@@ -88,120 +110,138 @@ public class MainUi extends JFrame {
         this.setVisible(true);
     }
 
-    // ==================== 1. 会员菜单 ====================
+    private void startClock() {
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        timeLbl.setText(sdf.format(new Date()));
+        timer = new Timer(1000, e -> timeLbl.setText(sdf.format(new Date())));
+        timer.start();
+    }
+
+    // ==================== 1. 会员菜单 (3列布局) ====================
     private void loadMemberMenu() {
-        int startX = 100;
-        int startY = 120;
-        int gap = 200;
+        // 计算居中起始X: 3个按钮的总宽度
+        int startX = calculateStartX(3);
+        int y = START_Y;
 
-        addSectionTitle("我的服务", startX, startY - 30);
+        // --- 第一行 ---
+        addSectionTitle(LanguageUtils.getText("main.sec.service"), startX, y - 35);
 
-        createMenuBtn("个人信息", "👤", StyleUtils.COLOR_PRIMARY, startX, startY,
+        createMenuBtn(LanguageUtils.getText("menu.profile"), "👤", StyleUtils.COLOR_PRIMARY, startX, y,
                 () -> new Ui.InfoUi((Member) userData).setVisible(true));
 
-        createMenuBtn("预约课程", "📅", StyleUtils.COLOR_SUCCESS, startX + gap, startY,
+        createMenuBtn(LanguageUtils.getText("menu.book"), "📅", StyleUtils.COLOR_SUCCESS, startX + BTN_W + GAP_X, y,
                 () -> new BookCourseUi((Member) userData));
 
-        createMenuBtn("我的预约", "📋", StyleUtils.COLOR_WARNING, startX + gap * 2, startY,
+        createMenuBtn(LanguageUtils.getText("menu.mybook"), "📋", StyleUtils.COLOR_WARNING, startX + (BTN_W + GAP_X) * 2, y,
                 () -> new Ui.MyBookingUi((Member) userData));
 
-        // 第二排
-        createMenuBtn("会员卡/续费", "💳", StyleUtils.COLOR_DANGER, startX, startY + 120, () -> {
+        // --- 第二行 ---
+        y += GAP_Y;
+        createMenuBtn(LanguageUtils.getText("menu.card"), "💳", StyleUtils.COLOR_DANGER, startX, y, () -> {
             Member mem = (Member) userData;
             dao.MembershipCardDAO cardDAO = new dao.MembershipCardDAO();
             if (cardDAO.hasMemberValidCard(mem.getId())) {
                 new RenewUi(this, mem, false);
             } else {
-                JOptionPane.showMessageDialog(this, "您当前没有有效的会员卡。\n请前往前台办理。", "提示", JOptionPane.INFORMATION_MESSAGE);
+                JOptionPane.showMessageDialog(this, "No Valid Card!", "Tip", JOptionPane.INFORMATION_MESSAGE);
             }
         });
     }
 
-    // ==================== 2. 员工菜单 (布局优化版) ====================
+    // ==================== 2. 员工菜单 (布局重构) ====================
     private void loadEmployeeMenu() {
         if (!(userData instanceof Employee)) return;
         Employee emp = (Employee) userData;
         int roleId = emp.getRoleId();
 
-        int x = 80;
-        int y = 140;
-        int w = 200; // 按钮宽度
-        int h = 100; // 按钮高度 (加大)
-        int gapX = 50;
-        int gapY = 60; // 行间距
-
-        // --- 教练权限 ---
+        // ------------------ 教练视图 (居中单列或少列) ------------------
         if (roleId == EmployeeRoleDAO.ROLE_ID_TRAINER) {
-            addSectionTitle("🏋️ 教练工作台", x, y - 30);
-            createMenuBtn("上课点名", "📝", StyleUtils.COLOR_PRIMARY, x, y,
+            int startX = calculateStartX(3); // 保持与前台一致的左边距
+            int y = START_Y;
+
+            addSectionTitle(LanguageUtils.getText("main.sec.trainer"), startX, y - 35);
+            createMenuBtn(LanguageUtils.getText("menu.att"), "📝", StyleUtils.COLOR_PRIMARY, startX, y,
                     () -> new Ui.CourseAttendanceUi((Employee) userData));
         }
 
-        // --- 前台权限 (重点优化) ---
+        // ------------------ 前台视图 (3列布局) ------------------
         else if (roleId == EmployeeRoleDAO.ROLE_ID_RECEPTIONIST) {
+            int startX = calculateStartX(3);
+            int y = START_Y;
 
-            // 第一排：高频业务 (签到、收银、充值)
-            addSectionTitle("🔥 前台高频业务", x, y - 30);
-            createMenuBtn("进场签到", "✅", StyleUtils.COLOR_PRIMARY, x, y, () -> new CheckInUi());
-            createMenuBtn("商品售卖", "🛒", StyleUtils.COLOR_WARNING, x + w + gapX, y, () -> new ShopUi());
-            createMenuBtn("余额充值", "💰", StyleUtils.COLOR_SUCCESS, x + (w + gapX) * 2, y, () -> new RechargeUi());
+            // Row 1: 前台高频 (签到、收银、充值)
+            addSectionTitle(LanguageUtils.getText("main.sec.front"), startX, y - 35);
+            createMenuBtn(LanguageUtils.getText("menu.checkin"), "✅", StyleUtils.COLOR_PRIMARY, startX, y, () -> new CheckInUi());
+            createMenuBtn(LanguageUtils.getText("menu.shop"), "🛒", StyleUtils.COLOR_WARNING, startX + BTN_W + GAP_X, y, () -> new ShopUi());
+            createMenuBtn(LanguageUtils.getText("menu.recharge"), "💰", StyleUtils.COLOR_SUCCESS, startX + (BTN_W + GAP_X) * 2, y, () -> new RechargeUi());
 
-            // 第二排：会籍服务 (会员、开卡、续费)
-            int y2 = y + h + gapY;
-            addSectionTitle("👥 会籍与会员服务", x, y2 - 30);
-            createMenuBtn("会员管理", "📂", StyleUtils.COLOR_INFO, x, y2, () -> new Ui.MemberManageUi());
-            createMenuBtn("新会员开卡", "🆕", StyleUtils.COLOR_DANGER, x + w + gapX, y2, () -> handleStaffCardAction("buy"));
-            createMenuBtn("会员续费", "🔄", StyleUtils.COLOR_DANGER, x + (w + gapX) * 2, y2, () -> handleStaffCardAction("renew"));
+            // Row 2: 会籍服务
+            y += GAP_Y;
+            addSectionTitle(LanguageUtils.getText("main.sec.member"), startX, y - 35);
+            createMenuBtn(LanguageUtils.getText("menu.mm"), "📂", StyleUtils.COLOR_INFO, startX, y, () -> new Ui.MemberManageUi());
+            createMenuBtn(LanguageUtils.getText("menu.newcard"), "🆕", StyleUtils.COLOR_DANGER, startX + BTN_W + GAP_X, y, () -> handleStaffCardAction("buy"));
+            createMenuBtn(LanguageUtils.getText("menu.renew"), "🔄", StyleUtils.COLOR_DANGER, startX + (BTN_W + GAP_X) * 2, y, () -> handleStaffCardAction("renew"));
 
-            // 第三排：后台管理 (排课、库存)
-            int y3 = y2 + h + gapY;
-            addSectionTitle("📦 后台管理", x, y3 - 30);
-            createMenuBtn("排课管理", "📅", StyleUtils.COLOR_INFO, x, y3, () -> new Ui.CourseManageUi((Employee) userData));
-            createMenuBtn("库存管理", "📊", StyleUtils.COLOR_INFO, x + w + gapX, y3, () -> new ProductManageUi());
+            // Row 3: 后台管理
+            y += GAP_Y;
+            addSectionTitle(LanguageUtils.getText("main.sec.backend"), startX, y - 35);
+            createMenuBtn(LanguageUtils.getText("menu.cm"), "📅", StyleUtils.COLOR_INFO, startX, y, () -> new Ui.CourseManageUi((Employee) userData));
+            createMenuBtn(LanguageUtils.getText("menu.stock"), "📊", StyleUtils.COLOR_INFO, startX + BTN_W + GAP_X, y, () -> new ProductManageUi());
         }
 
-        // --- 管理员权限 ---
+        // ------------------ 管理员视图 (4列布局 - 优化展示更多功能) ------------------
         else if (roleId == EmployeeRoleDAO.ROLE_ID_ADMIN) {
-            addSectionTitle("🛡️ 综合管理控制台", x, y - 30);
+            int startX = calculateStartX(4); // 管理员功能多，用4列
+            int y = START_Y;
+            int col2 = startX + BTN_W + GAP_X;
+            int col3 = startX + (BTN_W + GAP_X) * 2;
+            int col4 = startX + (BTN_W + GAP_X) * 3;
 
-            // 第一排：基础运营
-            createMenuBtn("进场签到", "✅", StyleUtils.COLOR_PRIMARY, x, y, () -> new CheckInUi());
-            createMenuBtn("排课管理", "📅", StyleUtils.COLOR_PRIMARY, x + w + gapX, y, () -> new Ui.CourseManageUi((Employee) userData));
-            createMenuBtn("会员管理", "👥", StyleUtils.COLOR_PRIMARY, x + (w + gapX) * 2, y, () -> new Ui.MemberManageUi());
-            createMenuBtn("员工/人事", "👔", StyleUtils.COLOR_DANGER, x + (w + gapX) * 3, y, () -> new Ui.EmployeeManageUi());
+            // Row 1: 核心管理 (签到, 排课, 会员, 员工)
+            addSectionTitle(LanguageUtils.getText("main.sec.admin"), startX, y - 35);
+            createMenuBtn(LanguageUtils.getText("menu.checkin"), "✅", StyleUtils.COLOR_PRIMARY, startX, y, () -> new CheckInUi());
+            createMenuBtn(LanguageUtils.getText("menu.cm"), "📅", StyleUtils.COLOR_PRIMARY, col2, y, () -> new Ui.CourseManageUi((Employee) userData));
+            createMenuBtn(LanguageUtils.getText("menu.mm"), "👥", StyleUtils.COLOR_PRIMARY, col3, y, () -> new Ui.MemberManageUi());
+            createMenuBtn(LanguageUtils.getText("menu.emp"), "👔", StyleUtils.COLOR_DANGER, col4, y, () -> new Ui.EmployeeManageUi());
 
-            // 第二排：业务与收银
-            int y2 = y + h + gapY;
-            createMenuBtn("上课点名", "📝", StyleUtils.COLOR_INFO, x, y2, () -> new Ui.CourseAttendanceUi((Employee) userData));
-            createMenuBtn("库存管理", "📦", StyleUtils.COLOR_WARNING, x + w + gapX, y2, () -> new ProductManageUi());
-            createMenuBtn("商品售卖", "🛒", StyleUtils.COLOR_SUCCESS, x + (w + gapX) * 2, y2, () -> new ShopUi());
-            createMenuBtn("余额充值", "💰", StyleUtils.COLOR_SUCCESS, x + (w + gapX) * 3, y2, () -> new RechargeUi());
+            // Row 2: 业务运营 (点名, 库存, 商品, 充值)
+            y += GAP_Y;
+            createMenuBtn(LanguageUtils.getText("menu.att"), "📝", StyleUtils.COLOR_INFO, startX, y, () -> new Ui.CourseAttendanceUi((Employee) userData));
+            createMenuBtn(LanguageUtils.getText("menu.stock"), "📦", StyleUtils.COLOR_WARNING, col2, y, () -> new ProductManageUi());
+            createMenuBtn(LanguageUtils.getText("menu.shop"), "🛒", StyleUtils.COLOR_SUCCESS, col3, y, () -> new ShopUi());
+            createMenuBtn(LanguageUtils.getText("menu.recharge"), "💰", StyleUtils.COLOR_SUCCESS, col4, y, () -> new RechargeUi());
 
-            // 第三排：决策与高级
-            int y3 = y2 + h + gapY;
-            createMenuBtn("开卡/续费", "💳", StyleUtils.COLOR_DANGER, x, y3, () -> {
-                String[] options = {"新会员开卡", "老会员续费"};
-                int choice = JOptionPane.showOptionDialog(this, "请选择业务类型:", "会籍业务",
-                        JOptionPane.DEFAULT_OPTION, JOptionPane.INFORMATION_MESSAGE, null, options, options[0]);
+            // Row 3: 决策与开卡
+            y += GAP_Y;
+            createMenuBtn(LanguageUtils.getText("menu.card"), "💳", StyleUtils.COLOR_DANGER, startX, y, () -> {
+                Object[] options = {LanguageUtils.getText("menu.newcard"), LanguageUtils.getText("menu.renew")};
+                int choice = JOptionPane.showOptionDialog(this, "Select:", "Card", JOptionPane.DEFAULT_OPTION, JOptionPane.INFORMATION_MESSAGE, null, options, options[0]);
                 if (choice == 0) handleStaffCardAction("buy");
                 if (choice == 1) handleStaffCardAction("renew");
             });
 
-            createMenuBtn("经营报表", "📊", new Color(100, 100, 255), x + w + gapX, y3, () -> new ReportUi());
+            createMenuBtn(LanguageUtils.getText("menu.report"), "📊", new Color(100, 100, 255), col2, y, () -> new ReportUi());
         }
     }
 
-    // ==================== 辅助方法 ====================
+    // === 辅助方法 ===
+
+    /**
+     * 计算居中布局的起始 X 坐标
+     * @param numButtons 列数
+     */
+    private int calculateStartX(int numButtons) {
+        int totalWidth = numButtons * BTN_W + (numButtons - 1) * GAP_X;
+        return (WIN_WIDTH - totalWidth) / 2;
+    }
 
     private void createMenuBtn(String text, String icon, Color color, int x, int y, Runnable action) {
-        // 使用 HTML 实现图标在上，文字在下
         String html = "<html><center><font size='6'>" + icon + "</font><br><font size='4'>" + text + "</font></center></html>";
         JButton btn = new JButton(html);
-
-        btn.setBounds(x, y, 180, 90); // 统一大按钮
+        btn.setBounds(x, y, BTN_W, BTN_H); // 使用常量大小
         StyleUtils.styleButton(btn, color);
 
-        // 悬停变色
+        // 增加阴影或悬停效果 (StyleUtils里已经有了，这里增加动态变色)
         btn.addMouseListener(new MouseAdapter() {
             public void mouseEntered(MouseEvent e) { btn.setBackground(color.darker()); }
             public void mouseExited(MouseEvent e) { btn.setBackground(color); }
@@ -213,34 +253,23 @@ public class MainUi extends JFrame {
 
     private void addSectionTitle(String title, int x, int y) {
         JLabel lbl = new JLabel(title);
-        lbl.setFont(StyleUtils.FONT_BOLD);
+        lbl.setFont(new Font("微软雅黑", Font.BOLD, 16));
         lbl.setForeground(Color.GRAY);
         lbl.setBounds(x, y, 300, 30);
         this.getContentPane().add(lbl);
     }
 
-    // 员工开卡/续费辅助逻辑
     private void handleStaffCardAction(String actionType) {
-        String input = JOptionPane.showInputDialog(this, "请输入会员手机号或ID:");
+        String input = JOptionPane.showInputDialog(this, "Enter ID/Phone:");
         if (input == null || input.trim().isEmpty()) return;
-
         service.MemberService ms = new service.MemberService();
         java.util.List<Member> list = ms.search(input);
-
-        if (list.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "未找到该会员！请先在「会员管理」中注册。");
-            return;
-        }
+        if (list.isEmpty()) { JOptionPane.showMessageDialog(this, "Not Found!"); return; }
         Member targetMember = list.get(0);
         if ("buy".equals(actionType)) {
             dao.MembershipCardDAO cardDAO = new dao.MembershipCardDAO();
-            if (cardDAO.hasMemberValidCard(targetMember.getId())) {
-                JOptionPane.showMessageDialog(this, "该会员已有有效卡！请使用续费功能。");
-            } else {
-                new Ui.BuyCardUi(targetMember);
-            }
-        } else if ("renew".equals(actionType)) {
-            new RenewUi(this, targetMember, true);
-        }
+            if (cardDAO.hasMemberValidCard(targetMember.getId())) JOptionPane.showMessageDialog(this, "Already has card!");
+            else new Ui.BuyCardUi(targetMember);
+        } else if ("renew".equals(actionType)) new RenewUi(this, targetMember, true);
     }
 }

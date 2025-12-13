@@ -1,7 +1,8 @@
 package Ui;
 
 import service.UserService;
-import utils.StyleUtils; // 导入样式
+import utils.LanguageUtils; // 引入
+import utils.StyleUtils;
 
 import javax.swing.*;
 import java.awt.*;
@@ -16,25 +17,24 @@ public class LoginUi extends JFrame implements MouseListener {
     private JLabel registerLabel;
 
     public void LoginJFrame() {
-        // 1. 初始化主题
         StyleUtils.initGlobalTheme();
-
-        this.setSize(900, 600); // 窗口做大一点，大气
-        this.setTitle("💪 健身房管理系统 - 登录");
+        this.setSize(900, 600);
+        this.setTitle("💪 " + LanguageUtils.getText("app.title") + " - " + LanguageUtils.getText("login.title"));
         this.setLocationRelativeTo(null);
         this.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
         this.setLayout(null);
-
-        // 设置整体背景色
         this.getContentPane().setBackground(StyleUtils.COLOR_BG);
 
         initView();
-
         this.setVisible(true);
     }
 
     private void initView() {
-        // === 1. 左侧装饰图/标题区 ===
+        // 语言切换按钮
+        JButton langBtn = LanguageUtils.createLanguageButton(this, () -> new LoginUi().LoginJFrame());
+        langBtn.setBounds(800, 10, 70, 30);
+        this.add(langBtn);
+
         JPanel leftPanel = new JPanel();
         leftPanel.setBounds(0, 0, 400, 600);
         leftPanel.setBackground(StyleUtils.COLOR_PRIMARY);
@@ -46,28 +46,22 @@ public class LoginUi extends JFrame implements MouseListener {
         logoText.setBounds(50, 200, 300, 50);
         leftPanel.add(logoText);
 
-        JLabel subText = new JLabel("专业的健身房管理专家");
+        JLabel subText = new JLabel(LanguageUtils.getText("login.slogan"));
         subText.setFont(StyleUtils.FONT_NORMAL);
         subText.setForeground(new Color(255, 255, 255, 200));
         subText.setBounds(55, 260, 300, 30);
         leftPanel.add(subText);
-
         this.add(leftPanel);
 
-        // === 2. 右侧登录表单区 ===
-        int startX = 500;
-        int startY = 120;
-        int fieldW = 300;
-        int fieldH = 45; // 增高输入框
+        int startX = 500, startY = 120, fieldW = 300, fieldH = 45;
 
-        JLabel titleLbl = new JLabel("欢迎登录");
+        JLabel titleLbl = new JLabel(LanguageUtils.getText("login.title"));
         titleLbl.setFont(StyleUtils.FONT_TITLE_BIG);
         titleLbl.setForeground(StyleUtils.COLOR_TEXT_MAIN);
         titleLbl.setBounds(startX, startY, 200, 40);
         this.add(titleLbl);
 
-        // 用户名
-        JLabel uLabel = new JLabel("账号 / Username");
+        JLabel uLabel = new JLabel(LanguageUtils.getText("login.user"));
         uLabel.setFont(StyleUtils.FONT_NORMAL);
         uLabel.setForeground(StyleUtils.COLOR_INFO);
         uLabel.setBounds(startX, startY + 60, 200, 30);
@@ -78,8 +72,7 @@ public class LoginUi extends JFrame implements MouseListener {
         StyleUtils.styleTextField(usernameField);
         this.add(usernameField);
 
-        // 密码
-        JLabel pLabel = new JLabel("密码 / Password");
+        JLabel pLabel = new JLabel(LanguageUtils.getText("login.pass"));
         pLabel.setFont(StyleUtils.FONT_NORMAL);
         pLabel.setForeground(StyleUtils.COLOR_INFO);
         pLabel.setBounds(startX, startY + 150, 200, 30);
@@ -90,20 +83,18 @@ public class LoginUi extends JFrame implements MouseListener {
         StyleUtils.styleTextField(passwordField);
         this.add(passwordField);
 
-        // 登录按钮
-        loginButton = new JButton("立即登录");
+        loginButton = new JButton(LanguageUtils.getText("login.btn"));
         loginButton.setBounds(startX, startY + 260, fieldW, 50);
         StyleUtils.styleButton(loginButton, StyleUtils.COLOR_PRIMARY);
         loginButton.setFont(new Font("微软雅黑", Font.BOLD, 18));
         loginButton.addMouseListener(this);
         this.add(loginButton);
 
-        // 注册链接
-        registerLabel = new JLabel("<html><u>没有账号？点此注册会员</u></html>");
+        registerLabel = new JLabel(LanguageUtils.getText("login.reg_link"));
         registerLabel.setFont(StyleUtils.FONT_NORMAL);
         registerLabel.setForeground(StyleUtils.COLOR_PRIMARY);
         registerLabel.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        registerLabel.setBounds(startX, startY + 320, 200, 30);
+        registerLabel.setBounds(startX, startY + 320, 250, 30);
         registerLabel.addMouseListener(this);
         this.add(registerLabel);
     }
@@ -123,7 +114,7 @@ public class LoginUi extends JFrame implements MouseListener {
         String password = new String(passwordField.getPassword()).trim();
 
         if (username.isEmpty() || password.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "请输入用户名和密码");
+            JOptionPane.showMessageDialog(this, LanguageUtils.getText("msg.incomplete"));
             return;
         }
 
@@ -134,11 +125,10 @@ public class LoginUi extends JFrame implements MouseListener {
             this.dispose();
             new MainUi(result.getUserType(), result.getUserData());
         } else {
-            JOptionPane.showMessageDialog(this, result.getMessage(), "登录失败", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, result.getMessage(), LanguageUtils.getText("msg.error"), JOptionPane.ERROR_MESSAGE);
         }
     }
 
-    // 空实现
     public void mousePressed(MouseEvent e) {}
     public void mouseReleased(MouseEvent e) {}
     public void mouseEntered(MouseEvent e) {}
