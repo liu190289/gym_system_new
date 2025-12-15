@@ -122,14 +122,14 @@ public class RechargeUi extends JFrame {
         rechargePanel.add(confirmBtn);
 
         addQuickBtn(rechargePanel, "¥ 100", 20, 110);
-        addQuickBtn(rechargePanel, "¥ 500", 110, 110);
-        addQuickBtn(rechargePanel, "¥ 1000", 200, 110);
+        addQuickBtn(rechargePanel, "¥ 500", 140, 110);
+        addQuickBtn(rechargePanel, "¥ 1000", 260, 110);
     }
 
     // ... (其他方法保持不变) ...
     private void addQuickBtn(JPanel panel, String text, int x, int y) {
         JButton btn = new JButton(text);
-        btn.setBounds(x, y, 80, 35);
+        btn.setBounds(x, y, 110, 35);
         btn.setFont(StyleUtils.FONT_NORMAL);
         btn.setBackground(new Color(245, 245, 245));
         btn.addActionListener(e -> amountField.setText(text.replace("¥ ", "")));

@@ -753,13 +753,22 @@ public class MemberDAO {
     }
 
     /**
-     * 校验手机号格式（中国大陆手机号）
+     * 校验手机号格式（马来手机号）
      * 
      * @param phone 手机号
      * @return true表示有效
      */
     public boolean isValidPhone(String phone) {
-        return phone != null && phone.matches("^1[3-9]\\d{9}$");
+        // 正则解释：
+        // ^                 : 匹配字符串开头
+        // (                 : 开始分组
+        //   01\\d{8,9}      : 马来西亚格式 (以01开头，后面跟8到9位数字)
+        //   |               : 或 (OR)
+        //   1[3-9]\\d{9}    : 中国格式 (以1开头，第2位是3-9，后面跟9位数字)
+        // )                 : 结束分组
+        // $                 : 匹配字符串结尾
+
+        return phone != null && phone.matches("^(01\\d{8,9}|1[3-9]\\d{9})$");
     }
 
     /**

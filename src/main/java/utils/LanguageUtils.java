@@ -120,6 +120,8 @@ public class LanguageUtils {
         put("att.select", "选择当前课程", "Select Course");
         put("att.load", "加载名单", "Load List");
         put("att.tip", "双击学生行可进行签到", "Double click to check-in student");
+        put("att.show_history", "显示所有历史课程", "Show History Courses");
+        put("att.admin_mode", "管理员模式：加载所有课程", "Admin Mode: All Courses Loaded");
 
         // === 7. 库存管理 & 商城 (修复: shop.col.name, pm.add, pm.edit) ===
         put("pm.title", "商品库存管理", "Inventory Management");
