@@ -1,10 +1,10 @@
 package Ui;
 
 import com.toedter.calendar.JDateChooser;
-import dao.MemberDAO; // 仍然需要 MemberDAO 可能是为了 searchField 的一些兼容，或者可以移除如果完全用 Service
 import entity.Member;
 import service.MemberService;
-import service.ServiceResult; // 核心修复：引入独立的 ServiceResult
+import service.UserService; // 1. 引入 UserService
+import service.ServiceResult;
 import utils.LanguageUtils;
 import utils.StyleUtils;
 
@@ -17,18 +17,17 @@ import java.util.List;
 public class MemberManageUi extends JFrame {
 
     private MemberService memberService;
+    private UserService userService; // 2. 声明 UserService
     private JTable memberTable;
     private DefaultTableModel tableModel;
     private JTextField searchField;
 
     public MemberManageUi() {
         this.memberService = new MemberService();
+        this.userService = new UserService(); // 3. 初始化 UserService
 
-        // 1. 初始化主题
         StyleUtils.initGlobalTheme();
-
-        // 设置标题 (从词典获取)
-        setTitle(LanguageUtils.getText("mm.title"));
+        setTitle("👥 " + LanguageUtils.getText("mm.title"));
         setSize(1000, 650);
         setLocationRelativeTo(null);
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
@@ -41,7 +40,6 @@ public class MemberManageUi extends JFrame {
     }
 
     private void initView() {
-        // ==================== 顶部工具栏 ====================
         JPanel toolBar = new JPanel(new FlowLayout(FlowLayout.LEFT, 15, 15));
         toolBar.setBackground(Color.WHITE);
         toolBar.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(230, 230, 230)));
@@ -54,7 +52,6 @@ public class MemberManageUi extends JFrame {
 
         searchField = new JTextField(15);
         StyleUtils.styleTextField(searchField);
-        // 回车搜索
         searchField.addActionListener(e -> searchMember());
         toolBar.add(searchField);
 
@@ -68,7 +65,6 @@ public class MemberManageUi extends JFrame {
         refreshBtn.addActionListener(e -> loadData());
         toolBar.add(refreshBtn);
 
-        // 分隔线
         toolBar.add(new JSeparator(SwingConstants.VERTICAL));
 
         // 操作按钮
@@ -76,6 +72,17 @@ public class MemberManageUi extends JFrame {
         StyleUtils.styleButton(addBtn, StyleUtils.COLOR_SUCCESS);
         addBtn.addActionListener(e -> addMember());
         toolBar.add(addBtn);
+
+        // === 4. 新增：账号管理按钮 ===
+        // 如果 LanguageUtils 还没加 mm.account，可以用 "em.account" 代替
+        String accText = "👤 Account";
+        try { accText = "👤 " + LanguageUtils.getText("mm.account"); } catch (Exception e) { accText = "👤 " + LanguageUtils.getText("em.account"); }
+
+        JButton accountBtn = new JButton(accText);
+        StyleUtils.styleButton(accountBtn, new Color(155, 89, 182)); // 紫色
+        accountBtn.addActionListener(e -> manageAccount());
+        toolBar.add(accountBtn);
+        // ============================
 
         JButton editBtn = new JButton("✏️ " + LanguageUtils.getText("btn.edit"));
         StyleUtils.styleButton(editBtn, StyleUtils.COLOR_WARNING);
@@ -87,30 +94,27 @@ public class MemberManageUi extends JFrame {
         delBtn.addActionListener(e -> deleteMember());
         toolBar.add(delBtn);
 
-        // 语言切换按钮
         JButton langBtn = LanguageUtils.createLanguageButton(this, () -> new MemberManageUi());
         toolBar.add(langBtn);
 
-        // ==================== 中间表格区域 ====================
+        // 表格
         String[] columns = {
-                LanguageUtils.getText("mm.col.id"),      // ID
-                LanguageUtils.getText("mm.col.name"),    // 姓名
-                LanguageUtils.getText("mm.col.phone"),   // 手机号
-                LanguageUtils.getText("mm.col.gender"),  // 性别
-                LanguageUtils.getText("mm.col.date"),    // 注册时间
-                LanguageUtils.getText("mm.col.status"),  // 状态
-                LanguageUtils.getText("mm.col.balance")  // 余额
+                LanguageUtils.getText("mm.col.id"),
+                LanguageUtils.getText("mm.col.name"),
+                LanguageUtils.getText("mm.col.phone"),
+                LanguageUtils.getText("mm.col.gender"),
+                LanguageUtils.getText("mm.col.date"),
+                LanguageUtils.getText("mm.col.status"),
+                LanguageUtils.getText("mm.col.balance")
         };
 
         tableModel = new DefaultTableModel(columns, 0) {
-            @Override
-            public boolean isCellEditable(int row, int column) { return false; }
+            @Override public boolean isCellEditable(int row, int column) { return false; }
         };
 
         memberTable = new JTable(tableModel);
         StyleUtils.styleTable(memberTable);
 
-        // 滚动条包裹
         JScrollPane scrollPane = new JScrollPane(memberTable);
         scrollPane.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
         scrollPane.getViewport().setBackground(Color.WHITE);
@@ -120,22 +124,15 @@ public class MemberManageUi extends JFrame {
     private void loadData() {
         tableModel.setRowCount(0);
         List<Member> members = memberService.getAllMembers();
-        for (Member m : members) {
-            addMemberToTable(m);
-        }
+        for (Member m : members) addMemberToTable(m);
     }
 
     private void searchMember() {
         String keyword = searchField.getText().trim();
-        if (keyword.isEmpty()) {
-            loadData();
-            return;
-        }
+        if (keyword.isEmpty()) { loadData(); return; }
         tableModel.setRowCount(0);
         List<Member> members = memberService.search(keyword);
-        for (Member m : members) {
-            addMemberToTable(m);
-        }
+        for (Member m : members) addMemberToTable(m);
     }
 
     private void addMemberToTable(Member m) {
@@ -144,18 +141,54 @@ public class MemberManageUi extends JFrame {
                 LanguageUtils.getText("mm.gender.female");
 
         tableModel.addRow(new Object[]{
-                m.getId(),
-                m.getName(),
-                m.getPhone(),
-                genderShow,
-                m.getRegisterDate(),
-                m.getStatus(),
-                String.format("%.2f", m.getBalance())
+                m.getId(), m.getName(), m.getPhone(), genderShow,
+                m.getRegisterDate(), m.getStatus(), String.format("%.2f", m.getBalance())
         });
     }
 
-    // ==================== 新增会员 ====================
+    // === 5. 新增：账号管理逻辑 ===
+    private void manageAccount() {
+        int row = memberTable.getSelectedRow();
+        if (row == -1) {
+            JOptionPane.showMessageDialog(this, "Please select a member first!");
+            return;
+        }
+
+        // 从表格获取数据 (ID在第0列，Name在第1列，Phone在第2列)
+        int memberId = (int) tableModel.getValueAt(row, 0);
+        String name = (String) tableModel.getValueAt(row, 1);
+        String phone = (String) tableModel.getValueAt(row, 2);
+
+        JTextField uF = new JTextField(phone); // 默认账号为手机号
+        JTextField pF = new JTextField();
+
+        Object[] msg = {
+                "Member: " + name,
+                LanguageUtils.getText("login.user"), uF,
+                LanguageUtils.getText("login.pass"), pF
+        };
+
+        String title = "👤 " + (LanguageUtils.getText("mm.account").equals("mm.account") ? "Account Mgmt" : LanguageUtils.getText("mm.account"));
+
+        if (JOptionPane.showConfirmDialog(this, msg, title, JOptionPane.OK_CANCEL_OPTION) == JOptionPane.OK_OPTION) {
+            String username = uF.getText().trim();
+            String password = pF.getText().trim();
+
+            // 调用 Service
+            UserService.ServiceResult<Void> result = userService.setMemberAccount(memberId, username, password);
+
+            if (result.isSuccess()) {
+                JOptionPane.showMessageDialog(this, result.getMessage());
+            } else {
+                JOptionPane.showMessageDialog(this, "❌ " + result.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
+
+    // ... (addMember, editMember, deleteMember 保持不变) ...
+
     private void addMember() {
+        // (略，保持你原有的 addMember 代码不变)
         JDialog dialog = new JDialog(this, LanguageUtils.getText("mm.dialog.add"), true);
         dialog.setSize(400, 480);
         dialog.setLocationRelativeTo(this);
@@ -211,7 +244,6 @@ public class MemberManageUi extends JFrame {
                 return;
             }
 
-            // 修复点：使用 ServiceResult 而不是 MemberService.ServiceResult
             ServiceResult<Member> result = memberService.register(name, phone, email, gender, birthDate);
 
             if (result.isSuccess()) {
@@ -233,7 +265,6 @@ public class MemberManageUi extends JFrame {
         dialog.setVisible(true);
     }
 
-    // ==================== 编辑会员 ====================
     private void editMember() {
         int row = memberTable.getSelectedRow();
         if (row == -1) {
@@ -311,7 +342,6 @@ public class MemberManageUi extends JFrame {
                 return;
             }
 
-            // 修复点：使用 ServiceResult 而不是 MemberService.ServiceResult
             ServiceResult<Member> resultInfo = memberService.updateMemberInfo(
                     id, name, email, gender, birthDate, registerDate
             );
@@ -340,7 +370,6 @@ public class MemberManageUi extends JFrame {
         dialog.setVisible(true);
     }
 
-    // ==================== 删除会员 ====================
     private void deleteMember() {
         int row = memberTable.getSelectedRow();
         if (row == -1) {
@@ -356,7 +385,6 @@ public class MemberManageUi extends JFrame {
                 JOptionPane.YES_NO_OPTION);
 
         if (opt == JOptionPane.YES_OPTION) {
-            // 修复点：使用 ServiceResult 而不是 MemberService.ServiceResult
             ServiceResult<Void> result = memberService.deleteMember(id);
 
             if (result.isSuccess()) {

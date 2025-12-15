@@ -189,6 +189,7 @@ public class LanguageUtils {
         put("mm.dialog.edit", "编辑会员", "Edit Member");
         put("mm.gender.male", "男", "Male");
         put("mm.gender.female", "女", "Female");
+        put("mm.account", "账号管理", "Account Mgmt");
 
         // === 其他 Others ===
         put("info.title", "个人档案", "Profile");

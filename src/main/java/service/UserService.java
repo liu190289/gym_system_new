@@ -91,6 +91,64 @@ public class UserService {
     }
 
     /**
+     * 【新增】设置会员账号（创建 或 更新）
+     * 功能：管理员手动管理会员账号。
+     * 逻辑：如果会员已有账号，则更新用户名和密码；如果没有，则创建新账号。
+     */
+    public ServiceResult<Void> setMemberAccount(int memberId, String newUsername, String newPassword) {
+        if (newUsername == null || newUsername.trim().isEmpty()) return ServiceResult.failure("用户名不能为空");
+        if (newPassword == null || newPassword.length() < 6) return ServiceResult.failure("密码至少6位");
+
+        try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
+            // 1. 检查用户名是否被【其他人】占用
+            String sqlCheck = "SELECT user_id, reference_id, user_type FROM users WHERE username = ?";
+            PreparedStatement stmtCheck = conn.prepareStatement(sqlCheck);
+            stmtCheck.setString(1, newUsername);
+            ResultSet rsCheck = stmtCheck.executeQuery();
+
+            if (rsCheck.next()) {
+                // 如果查到了用户，且该用户不是当前正在操作的这个会员
+                boolean isSelf = "member".equals(rsCheck.getString("user_type")) && rsCheck.getInt("reference_id") == memberId;
+                if (!isSelf) {
+                    return ServiceResult.failure("该用户名 [" + newUsername + "] 已被其他人使用！");
+                }
+            }
+
+            // 2. 检查该会员当前是否有账号
+            String sqlExist = "SELECT user_id FROM users WHERE user_type = 'member' AND reference_id = ?";
+            PreparedStatement stmtExist = conn.prepareStatement(sqlExist);
+            stmtExist.setInt(1, memberId);
+            ResultSet rsExist = stmtExist.executeQuery();
+
+            if (rsExist.next()) {
+                // --- 情况 A: 已有账号 -> 执行 UPDATE (修改用户名/重置密码) ---
+                String sqlUpdate = "UPDATE users SET username = ?, password = ? WHERE user_type = 'member' AND reference_id = ?";
+                PreparedStatement stmtUpdate = conn.prepareStatement(sqlUpdate);
+                stmtUpdate.setString(1, newUsername);
+                stmtUpdate.setString(2, DBUtil.hashPassword(newPassword));
+                stmtUpdate.setInt(3, memberId);
+
+                int rows = stmtUpdate.executeUpdate();
+                return rows > 0 ? ServiceResult.success("✅ 会员账号已更新") : ServiceResult.failure("更新失败");
+            } else {
+                // --- 情况 B: 无账号 -> 执行 INSERT (开通账号) ---
+                String sqlInsert = "INSERT INTO users (username, password, user_type, reference_id) VALUES (?, ?, 'member', ?)";
+                PreparedStatement stmtInsert = conn.prepareStatement(sqlInsert);
+                stmtInsert.setString(1, newUsername);
+                stmtInsert.setString(2, DBUtil.hashPassword(newPassword));
+                stmtInsert.setInt(3, memberId);
+
+                int rows = stmtInsert.executeUpdate();
+                return rows > 0 ? ServiceResult.success("✅ 会员账号已开通") : ServiceResult.failure("开通失败");
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return ServiceResult.failure("系统错误: " + e.getMessage());
+        }
+    }
+
+    /**
      * 为员工注册用户账号
      */
     public ServiceResult<Void> registerEmployeeUser(int employeeId, String username, String password) {
