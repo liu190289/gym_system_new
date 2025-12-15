@@ -32,7 +32,7 @@ public class CourseAddUi extends JFrame {
         this.courseService = new CourseService();
         this.employeeService = new EmployeeService();
         StyleUtils.initGlobalTheme();
-        setTitle("📝 " + LanguageUtils.getText("cm.add"));
+        setTitle(LanguageUtils.getText("cm.add"));
         setSize(500, 650);
         setLocationRelativeTo(parent);
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);

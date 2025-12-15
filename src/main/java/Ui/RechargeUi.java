@@ -4,7 +4,7 @@ import entity.Member;
 import service.ShopService;
 import service.MemberService;
 import service.ServiceResult;
-import utils.LanguageUtils; // 引入
+import utils.LanguageUtils;
 import utils.StyleUtils;
 
 import javax.swing.*;
@@ -37,10 +37,12 @@ public class RechargeUi extends JFrame {
     }
 
     private void initView() {
+        // ... (语言按钮部分不变) ...
         JButton langBtn = LanguageUtils.createLanguageButton(this, () -> new RechargeUi());
         langBtn.setBounds(500, 10, 70, 30);
         add(langBtn);
 
+        // ... (SearchPanel 部分不变) ...
         JPanel searchPanel = new JPanel(null);
         searchPanel.setBounds(20, 40, 545, 100);
         searchPanel.setBackground(Color.WHITE);
@@ -67,6 +69,7 @@ public class RechargeUi extends JFrame {
         searchBtn.addActionListener(e -> searchMember());
         searchPanel.add(searchBtn);
 
+        // ... (InfoPanel 部分) ...
         JPanel infoPanel = new JPanel(null);
         infoPanel.setBounds(20, 150, 545, 100);
         infoPanel.setBackground(new Color(240, 248, 255));
@@ -80,11 +83,13 @@ public class RechargeUi extends JFrame {
         infoPanel.add(infoLabel);
 
         balanceLabel = new JLabel(LanguageUtils.getText("recharge.balance") + ": ¥ 0.00");
-        balanceLabel.setFont(new Font("Arial", Font.BOLD, 22));
+        // [修改点 1]：不要用 new Font("Arial"...), 改用 StyleUtils.FONT_TITLE_BIG
+        balanceLabel.setFont(StyleUtils.FONT_TITLE_BIG);
         balanceLabel.setForeground(StyleUtils.COLOR_SUCCESS);
         balanceLabel.setBounds(20, 55, 500, 30);
         infoPanel.add(balanceLabel);
 
+        // ... (RechargePanel 部分) ...
         JPanel rechargePanel = new JPanel(null);
         rechargePanel.setBounds(20, 270, 545, 180);
         rechargePanel.setBackground(Color.WHITE);
@@ -99,14 +104,19 @@ public class RechargeUi extends JFrame {
 
         amountField = new JTextField();
         amountField.setBounds(20, 45, 380, 45);
-        amountField.setFont(new Font("Arial", Font.BOLD, 20));
+        // [修改点 2]：不要用 new Font("Arial"...), 改用 StyleUtils.FONT_TITLE
+        amountField.setFont(StyleUtils.FONT_TITLE);
         StyleUtils.styleTextField(amountField);
         rechargePanel.add(amountField);
 
         confirmBtn = new JButton(LanguageUtils.getText("recharge.btn"));
         confirmBtn.setBounds(410, 45, 115, 45);
         StyleUtils.styleButton(confirmBtn, StyleUtils.COLOR_SUCCESS);
-        confirmBtn.setFont(new Font("微软雅黑", Font.BOLD, 16));
+        // [修改点 3]：不要用 new Font("微软雅黑"...), StyleUtils.styleButton 已经设置了字体
+        // confirmBtn.setFont(new Font("微软雅黑", Font.BOLD, 16)); // 删掉这行
+        // 如果觉得字体小，可以用 setFont 覆盖，但必须用 StyleUtils 的字体
+        confirmBtn.setFont(StyleUtils.FONT_TITLE);
+
         confirmBtn.setEnabled(false);
         confirmBtn.addActionListener(e -> performRecharge());
         rechargePanel.add(confirmBtn);
@@ -116,6 +126,7 @@ public class RechargeUi extends JFrame {
         addQuickBtn(rechargePanel, "¥ 1000", 200, 110);
     }
 
+    // ... (其他方法保持不变) ...
     private void addQuickBtn(JPanel panel, String text, int x, int y) {
         JButton btn = new JButton(text);
         btn.setBounds(x, y, 80, 35);
@@ -141,7 +152,11 @@ public class RechargeUi extends JFrame {
 
     private void resetInfo() {
         currentMember = null;
-        infoLabel.setText("-"); balanceLabel.setText("¥ 0.00"); confirmBtn.setEnabled(false); amountField.setText("");
+        infoLabel.setText("-");
+        // [修改点 4]：修复重置时文字丢失的问题，保留前缀
+        balanceLabel.setText(LanguageUtils.getText("recharge.balance") + ": ¥ 0.00");
+        confirmBtn.setEnabled(false);
+        amountField.setText("");
     }
 
     private void performRecharge() {

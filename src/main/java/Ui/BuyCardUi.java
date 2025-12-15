@@ -23,7 +23,7 @@ public class BuyCardUi extends JFrame {
         this.member = member;
         this.memberService = new MemberService();
         StyleUtils.initGlobalTheme();
-        setTitle("💳 " + LanguageUtils.getText("buy.title"));
+        setTitle( LanguageUtils.getText("buy.title"));
         setSize(700, 500);
         setLocationRelativeTo(null);
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);

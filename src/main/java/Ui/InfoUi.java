@@ -14,7 +14,7 @@ public class InfoUi extends JFrame {
     public InfoUi(Member member) {
         this.member = member;
         StyleUtils.initGlobalTheme();
-        setTitle("👤 " + LanguageUtils.getText("info.title"));
+        setTitle(LanguageUtils.getText("info.title"));
         setSize(400, 500);
         setLocationRelativeTo(null);
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);

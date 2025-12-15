@@ -81,6 +81,7 @@ public class LanguageUtils {
         put("checkin.tip", "支持输入：会员ID / 姓名 / 手机号", "Input: ID / Name / Phone");
         put("checkin.btn", "搜索并签到", "Check-In Now");
         put("checkin.log", "操作日志", "Log");
+        put("checkin.checkout","签退", "Check-Out");
 
         // === 4. 课程管理 & 添加 (修复: cm.search) ===
         put("cm.title", "课程排期管理", "Course Scheduling");
@@ -108,6 +109,11 @@ public class LanguageUtils {
         put("em.account", "账号管理", "Account Mgmt");
         put("em.col.role", "角色", "Role");
         put("em.col.hiredate", "入职日期", "Hire Date");
+        // === 角色名称 Roles (新增) ===
+        put("role.admin", "管理员", "Admin");
+        put("role.trainer", "健身教练", "Trainer");
+        put("role.receptionist", "前台接待", "Receptionist");
+        put("role.unknown", "未知角色", "Unknown");
 
         // === 6. 上课点名 (修复: att.select, att.load) ===
         put("att.title", "上课点名系统", "Class Attendance");
@@ -151,6 +157,21 @@ public class LanguageUtils {
         put("report.tab.table", "详细报表", "Table");
         put("report.tab.bar", "营收柱状图", "Bar Chart");
         put("report.tab.pie", "占比饼状图", "Pie Chart");
+        // === [新增] 图表内部文字 Charts ===
+        put("chart.bar.title", "近7天营收趋势", "Revenue Trend (7 Days)");
+        put("chart.bar.x", "日期", "Date");
+        put("chart.bar.y", "金额 (¥)", "Amount (¥)");
+        put("chart.series.revenue", "营收", "Revenue"); // 柱状图的图例
+
+        put("chart.pie.title", "商品销量分类占比", "Product Sales Distribution");
+        put("chart.pie.other", "其他", "Others"); // 饼图如果分类太多的归类
+        // === [新增] 图表数据分类 (用于翻译数据库里的原始数据) ===
+        // Key 建议用 cat. (Category) 开头
+        put("cat.product", "商品售卖", "Product Sales");
+        put("cat.renew", "续费业务", "Renewals");
+        put("cat.membership", "新办会员", "New Membership");
+        put("cat.recharge", "余额充值", "Balance Recharge");
+        put("cat.other", "其他", "Others");
 
         // === 10. 会员管理 Member Manage ===
         put("mm.title", "会员档案管理", "Member Management");

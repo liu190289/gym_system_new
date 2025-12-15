@@ -23,7 +23,7 @@ public class CourseManageUi extends JFrame {
         this.currentUser = user;
         this.courseService = new CourseService();
         StyleUtils.initGlobalTheme();
-        setTitle("📅 " + LanguageUtils.getText("cm.title"));
+        setTitle(LanguageUtils.getText("cm.title"));
         setSize(1100, 650);
         setLocationRelativeTo(null);
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);

@@ -27,7 +27,7 @@ public class BookCourseUi extends JFrame {
         this.courseService = new CourseService();
         this.bookingService = new BookingService();
         StyleUtils.initGlobalTheme();
-        setTitle("📅 " + LanguageUtils.getText("book.title"));
+        setTitle( LanguageUtils.getText("book.title"));
         setSize(900, 600);
         setLocationRelativeTo(null);
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);

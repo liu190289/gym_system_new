@@ -20,7 +20,7 @@ public class ProductManageUi extends JFrame {
     public ProductManageUi() {
         this.productService = new ProductService();
         StyleUtils.initGlobalTheme();
-        setTitle("📦 " + LanguageUtils.getText("pm.title"));
+        setTitle(LanguageUtils.getText("pm.title"));
         setSize(950, 600);
         setLocationRelativeTo(null);
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);

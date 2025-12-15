@@ -30,7 +30,7 @@ public class RegisterUi extends JFrame {
     public void RegisterJFrame() {
         StyleUtils.initGlobalTheme();
         this.setSize(550, 750);
-        this.setTitle("💪 " + LanguageUtils.getText("app.title") + " - " + LanguageUtils.getText("reg.title"));
+        this.setTitle(LanguageUtils.getText("app.title") + " - " + LanguageUtils.getText("reg.title"));
         this.setLocationRelativeTo(null);
         this.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
         this.setLayout(null);

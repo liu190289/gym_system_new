@@ -12,6 +12,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.List;
 
 public class MainUi extends JFrame {
 
@@ -23,7 +24,7 @@ public class MainUi extends JFrame {
     // === 布局常量配置 ===
     private final int WIN_WIDTH = 1000;
     private final int BTN_W = 180;   // 按钮宽度
-    private final int BTN_H = 100;   // 按钮高度 (稍微加高)
+    private final int BTN_H = 100;   // 按钮高度
     private final int GAP_X = 40;    // 水平间距
     private final int GAP_Y = 140;   // 垂直行距 (包含标题空间)
     private final int START_Y = 150; // 第一行按钮的起始Y坐标
@@ -31,7 +32,7 @@ public class MainUi extends JFrame {
     public MainUi(String userType, Object userData) {
         this.userType = userType;
         this.userData = userData;
-        StyleUtils.initGlobalTheme();
+        StyleUtils.initGlobalTheme(); // 确保加载全局皮肤
         initView();
     }
 
@@ -56,9 +57,9 @@ public class MainUi extends JFrame {
         logo.setBounds(20, 15, 220, 40);
         header.add(logo);
 
-        // 时间显示
+        // 时间显示 (使用等宽字体显示时间比较工整)
         timeLbl = new JLabel();
-        timeLbl.setFont(new Font("Monospaced", Font.BOLD, 16));
+        timeLbl.setFont(new Font(Font.MONOSPACED, Font.BOLD, 16));
         timeLbl.setForeground(new Color(100, 100, 100));
         timeLbl.setBounds(250, 20, 200, 30);
         header.add(timeLbl);
@@ -77,12 +78,12 @@ public class MainUi extends JFrame {
         userLbl.setBounds(460, 20, 240, 30);
         header.add(userLbl);
 
-        // 语言切换
+        // 语言切换按钮
         JButton langBtn = LanguageUtils.createLanguageButton(this, () -> new MainUi(userType, userData));
         langBtn.setBounds(710, 18, 80, 35);
         header.add(langBtn);
 
-        // 退出
+        // 退出按钮
         JButton logoutBtn = new JButton(LanguageUtils.getText("main.logout") + " ❌");
         StyleUtils.styleButton(logoutBtn, StyleUtils.COLOR_DANGER);
         logoutBtn.setBounds(800, 18, 160, 35);
@@ -154,7 +155,7 @@ public class MainUi extends JFrame {
         Employee emp = (Employee) userData;
         int roleId = emp.getRoleId();
 
-        // ------------------ 教练视图 (居中单列或少列) ------------------
+        // ------------------ 教练视图 (居中单列) ------------------
         if (roleId == EmployeeRoleDAO.ROLE_ID_TRAINER) {
             int startX = calculateStartX(3); // 保持与前台一致的左边距
             int y = START_Y;
@@ -241,7 +242,7 @@ public class MainUi extends JFrame {
         btn.setBounds(x, y, BTN_W, BTN_H); // 使用常量大小
         StyleUtils.styleButton(btn, color);
 
-        // 增加阴影或悬停效果 (StyleUtils里已经有了，这里增加动态变色)
+        // 增加阴影或悬停效果
         btn.addMouseListener(new MouseAdapter() {
             public void mouseEntered(MouseEvent e) { btn.setBackground(color.darker()); }
             public void mouseExited(MouseEvent e) { btn.setBackground(color); }
@@ -253,7 +254,8 @@ public class MainUi extends JFrame {
 
     private void addSectionTitle(String title, int x, int y) {
         JLabel lbl = new JLabel(title);
-        lbl.setFont(new Font("微软雅黑", Font.BOLD, 16));
+        // === 修复点：使用 StyleUtils 字体，避免硬编码 "微软雅黑" 导致方块 ===
+        lbl.setFont(StyleUtils.FONT_TITLE);
         lbl.setForeground(Color.GRAY);
         lbl.setBounds(x, y, 300, 30);
         this.getContentPane().add(lbl);
@@ -263,7 +265,7 @@ public class MainUi extends JFrame {
         String input = JOptionPane.showInputDialog(this, "Enter ID/Phone:");
         if (input == null || input.trim().isEmpty()) return;
         service.MemberService ms = new service.MemberService();
-        java.util.List<Member> list = ms.search(input);
+        List<Member> list = ms.search(input);
         if (list.isEmpty()) { JOptionPane.showMessageDialog(this, "Not Found!"); return; }
         Member targetMember = list.get(0);
         if ("buy".equals(actionType)) {

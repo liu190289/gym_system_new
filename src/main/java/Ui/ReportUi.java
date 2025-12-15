@@ -1,13 +1,18 @@
 package Ui;
 
 import dao.StatisticsDAO;
-import org.jfree.chart.*;
-import org.jfree.chart.plot.*;
+import org.jfree.chart.ChartFactory;
+import org.jfree.chart.ChartPanel;
+import org.jfree.chart.JFreeChart;
+import org.jfree.chart.plot.CategoryPlot;
+import org.jfree.chart.plot.PiePlot;
+import org.jfree.chart.plot.PlotOrientation;
 import org.jfree.chart.renderer.category.BarRenderer;
 import org.jfree.chart.renderer.category.StandardBarPainter;
+import org.jfree.chart.title.LegendTitle;
 import org.jfree.data.category.DefaultCategoryDataset;
 import org.jfree.data.general.DefaultPieDataset;
-import utils.LanguageUtils; // 导入
+import utils.LanguageUtils;
 import utils.StyleUtils;
 
 import javax.swing.*;
@@ -20,57 +25,60 @@ public class ReportUi extends JFrame {
 
     private StatisticsDAO statsDAO;
     private JLabel revenueLabel, memberLabel, orderLabel, stockLabel;
-    private JPanel centerPanel;
-    private CardLayout cardLayout;
+
     private DefaultCategoryDataset barDataset;
     private DefaultPieDataset pieDataset;
-    private JScrollPane tableScroll;
+    private JFreeChart barChart;
+    private JFreeChart pieChart;
+
+    private JTable table;
+    private DefaultTableModel tableModel;
+    private CardLayout cardLayout;
+    private JPanel centerPanel;
 
     public ReportUi() {
         this.statsDAO = new StatisticsDAO();
-        StyleUtils.initGlobalTheme(); // 关键：加载字体
-
+        StyleUtils.initGlobalTheme();
         setTitle("📊 " + LanguageUtils.getText("report.title"));
         setSize(1100, 750);
         setLocationRelativeTo(null);
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
         getContentPane().setBackground(StyleUtils.COLOR_BG);
-        setLayout(new BorderLayout(15, 15));
+        setLayout(new BorderLayout(10, 10));
 
         initTopCards();
         initCenterViews();
         initBottomToolbar();
+
         refreshData();
         setVisible(true);
     }
 
     private void initTopCards() {
+        JPanel topPanel = new JPanel(new GridLayout(1, 4, 15, 0));
+        topPanel.setOpaque(false);
+        topPanel.setBorder(BorderFactory.createEmptyBorder(15, 15, 5, 15));
+
+        revenueLabel = new JLabel("Loading...");
+        topPanel.add(createCard(LanguageUtils.getText("report.revenue"), revenueLabel, new Color(108, 92, 231)));
+
+        memberLabel = new JLabel("Loading...");
+        topPanel.add(createCard(LanguageUtils.getText("report.members"), memberLabel, new Color(9, 132, 227)));
+
+        orderLabel = new JLabel("Loading...");
+        topPanel.add(createCard(LanguageUtils.getText("report.orders"), orderLabel, new Color(0, 184, 148)));
+
+        stockLabel = new JLabel("Loading...");
+        topPanel.add(createCard(LanguageUtils.getText("report.stock"), stockLabel, new Color(214, 48, 49)));
+
         JPanel topContainer = new JPanel(new BorderLayout());
         topContainer.setOpaque(false);
-
-        // 语言切换按钮
         JPanel langPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         langPanel.setOpaque(false);
         JButton langBtn = LanguageUtils.createLanguageButton(this, () -> new ReportUi());
         langPanel.add(langBtn);
+
         topContainer.add(langPanel, BorderLayout.NORTH);
-
-        JPanel topPanel = new JPanel(new GridLayout(1, 4, 20, 0));
-        topPanel.setOpaque(false);
-        topPanel.setBorder(BorderFactory.createEmptyBorder(0, 20, 0, 20));
-
-        revenueLabel = new JLabel("Loading...");
-        topPanel.add(createCard("💰 " + LanguageUtils.getText("report.revenue"), revenueLabel, new Color(108, 92, 231)));
-
-        memberLabel = new JLabel("Loading...");
-        topPanel.add(createCard("👥 " + LanguageUtils.getText("report.members"), memberLabel, new Color(0, 184, 148)));
-
-        orderLabel = new JLabel("Loading...");
-        topPanel.add(createCard("📝 " + LanguageUtils.getText("report.orders"), orderLabel, new Color(253, 203, 110)));
-
-        stockLabel = new JLabel("Loading...");
-        topPanel.add(createCard("📦 " + LanguageUtils.getText("report.stock"), stockLabel, new Color(214, 48, 49)));
-
         topContainer.add(topPanel, BorderLayout.CENTER);
         add(topContainer, BorderLayout.NORTH);
     }
@@ -80,21 +88,25 @@ public class ReportUi extends JFrame {
         card.setBackground(Color.WHITE);
         card.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(new Color(230, 230, 230), 1),
-                BorderFactory.createEmptyBorder(15, 20, 15, 20)));
+                BorderFactory.createEmptyBorder(15, 20, 15, 20)
+        ));
         JPanel bar = new JPanel();
         bar.setPreferredSize(new Dimension(5, 0));
         bar.setBackground(barColor);
         card.add(bar, BorderLayout.WEST);
-        JPanel content = new JPanel(new GridLayout(2, 1));
+
+        JPanel content = new JPanel(new BorderLayout(0, 10));
         content.setOpaque(false);
-        content.setBorder(BorderFactory.createEmptyBorder(0, 10, 0, 0));
+        content.setBorder(BorderFactory.createEmptyBorder(0, 15, 0, 0));
+
         JLabel tLbl = new JLabel(title);
         tLbl.setFont(StyleUtils.FONT_NORMAL);
         tLbl.setForeground(StyleUtils.COLOR_INFO);
-        valueLabel.setFont(new Font("Arial", Font.BOLD, 24));
+        valueLabel.setFont(new Font(StyleUtils.FONT_NAME, Font.BOLD, 24)); // 修复字体
         valueLabel.setForeground(StyleUtils.COLOR_TEXT_MAIN);
-        content.add(tLbl);
-        content.add(valueLabel);
+
+        content.add(tLbl, BorderLayout.NORTH);
+        content.add(valueLabel, BorderLayout.CENTER);
         card.add(content, BorderLayout.CENTER);
         return card;
     }
@@ -102,103 +114,176 @@ public class ReportUi extends JFrame {
     private void initCenterViews() {
         cardLayout = new CardLayout();
         centerPanel = new JPanel(cardLayout);
-        centerPanel.setBorder(BorderFactory.createEmptyBorder(0, 20, 0, 20));
+        centerPanel.setBorder(BorderFactory.createEmptyBorder(0, 15, 0, 15));
         centerPanel.setOpaque(false);
 
-        JTable table = new JTable(new DefaultTableModel(new String[]{"ID", "Name", "Type", "Amount", "Time", "Status"}, 0));
+        // 表格
+        String[] cols = {"ID", "Name", "Type", "Amount", "Time", "Status"};
+        tableModel = new DefaultTableModel(cols, 0) {
+            @Override
+            public boolean isCellEditable(int r, int c) {
+                return false;
+            }
+        };
+        table = new JTable(tableModel);
         StyleUtils.styleTable(table);
-        tableScroll = new JScrollPane(table);
+        JScrollPane tableScroll = new JScrollPane(table);
         tableScroll.setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY));
         centerPanel.add(tableScroll, "TABLE");
 
+        // 柱状图
         barDataset = new DefaultCategoryDataset();
-        JFreeChart barChart = ChartFactory.createBarChart(LanguageUtils.getText("report.tab.bar"), "Type", "Amount", barDataset, PlotOrientation.VERTICAL, false, true, false);
+        barChart = ChartFactory.createBarChart(
+                LanguageUtils.getText("chart.bar.title"),
+                LanguageUtils.getText("chart.bar.x"),
+                LanguageUtils.getText("chart.bar.y"),
+                barDataset,
+                PlotOrientation.VERTICAL,
+                true, true, false
+        );
         styleBarChart(barChart);
         ChartPanel barPanel = new ChartPanel(barChart);
-        barPanel.setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY));
         centerPanel.add(barPanel, "BAR");
 
+        // 饼状图
         pieDataset = new DefaultPieDataset();
-        JFreeChart pieChart = ChartFactory.createPieChart(LanguageUtils.getText("report.tab.pie"), pieDataset, true, true, false);
+        pieChart = ChartFactory.createPieChart(
+                LanguageUtils.getText("chart.pie.title"),
+                pieDataset,
+                true, true, false
+        );
         stylePieChart(pieChart);
         ChartPanel piePanel = new ChartPanel(pieChart);
-        piePanel.setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY));
         centerPanel.add(piePanel, "PIE");
 
         add(centerPanel, BorderLayout.CENTER);
     }
 
     private void initBottomToolbar() {
-        JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 30, 15));
+        JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 15));
         bottomPanel.setBackground(Color.WHITE);
         bottomPanel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, new Color(230, 230, 230)));
-        bottomPanel.add(createSwitchBtn("📋 " + LanguageUtils.getText("report.tab.table"), "TABLE", StyleUtils.COLOR_PRIMARY));
-        bottomPanel.add(createSwitchBtn("📊 " + LanguageUtils.getText("report.tab.bar"), "BAR", new Color(255, 159, 67)));
-        bottomPanel.add(createSwitchBtn("🍰 " + LanguageUtils.getText("report.tab.pie"), "PIE", new Color(72, 219, 251)));
+
+        bottomPanel.add(createSwitchBtn("📄 " + LanguageUtils.getText("report.tab.table"), "TABLE", StyleUtils.COLOR_PRIMARY));
+        bottomPanel.add(createSwitchBtn("📊 " + LanguageUtils.getText("report.tab.bar"), "BAR", StyleUtils.COLOR_SUCCESS));
+        bottomPanel.add(createSwitchBtn("🍰 " + LanguageUtils.getText("report.tab.pie"), "PIE", StyleUtils.COLOR_WARNING));
+
         add(bottomPanel, BorderLayout.SOUTH);
     }
 
     private JButton createSwitchBtn(String text, String cardName, Color color) {
         JButton btn = new JButton(text);
         StyleUtils.styleButton(btn, color);
-        btn.setPreferredSize(new Dimension(160, 45));
+        btn.setPreferredSize(new Dimension(140, 40));
         btn.addActionListener(e -> cardLayout.show(centerPanel, cardName));
         return btn;
     }
 
+    /**
+     * 核心修改逻辑：这里进行数据的翻译映射
+     */
     private void refreshData() {
-        revenueLabel.setText("¥ " + String.format("%,.2f", statsDAO.getTotalRevenue()));
+        // 1. 卡片
+        revenueLabel.setText(String.format("¥ %,.2f", statsDAO.getTotalRevenue()));
         memberLabel.setText(String.valueOf(statsDAO.getTotalMembers()));
         orderLabel.setText(String.valueOf(statsDAO.getTodayOrderCount()));
         stockLabel.setText(String.valueOf(statsDAO.getLowStockProductCount()));
 
+        // 2. 表格
+        tableModel.setRowCount(0);
         List<Map<String, Object>> orders = statsDAO.getRecentOrders();
-        JTable table = (JTable) tableScroll.getViewport().getView();
-        DefaultTableModel model = (DefaultTableModel) table.getModel();
-        model.setRowCount(0);
         for (Map<String, Object> o : orders) {
-            model.addRow(new Object[]{o.get("id"), o.get("name"), o.get("type"), String.format("¥ %.2f", o.get("amount")), o.get("time"), o.get("status")});
+            tableModel.addRow(new Object[]{
+                    o.get("id"), o.get("name"), o.get("type"),
+                    String.format("¥ %.2f", o.get("amount")),
+                    o.get("time"), o.get("status")
+            });
         }
-        try {
-            Map<String, Double> data = statsDAO.getRevenueByType();
-            barDataset.clear(); pieDataset.clear();
-            for (Map.Entry<String, Double> entry : data.entrySet()) {
-                barDataset.setValue(entry.getValue(), "Revenue", entry.getKey());
-                pieDataset.setValue(entry.getKey(), entry.getValue());
+
+        // 3. 柱状图 (演示数据)
+        barDataset.clear();
+        String seriesName = LanguageUtils.getText("chart.series.revenue");
+        barDataset.addValue(5000, seriesName, "Mon");
+        barDataset.addValue(7000, seriesName, "Tue");
+        barDataset.addValue(6000, seriesName, "Wed");
+        barDataset.addValue(8000, seriesName, "Thu");
+        barDataset.addValue(4000, seriesName, "Fri");
+
+        // 4. 饼状图 (关键修改点！)
+        pieDataset.clear();
+        Map<String, Double> pieData = statsDAO.getRevenueByType();
+
+        for (Map.Entry<String, Double> entry : pieData.entrySet()) {
+            String rawKey = entry.getKey(); // 数据库原始值 (例如 "商品售卖")
+            String displayKey = rawKey;     // 默认显示原始值
+
+            // === 翻译映射逻辑 ===
+            // 检查数据库里可能的中文 Key，并映射到 LanguageUtils
+            if (rawKey.contains("商品") || rawKey.equalsIgnoreCase("Product")) {
+                displayKey = LanguageUtils.getText("cat.product");
+            } else if (rawKey.contains("续费") || rawKey.equalsIgnoreCase("Renew")) {
+                displayKey = LanguageUtils.getText("cat.renew");
+            } else if (rawKey.contains("会员") || rawKey.equalsIgnoreCase("Membership")) {
+                displayKey = LanguageUtils.getText("cat.membership");
+            } else if (rawKey.contains("充值") || rawKey.equalsIgnoreCase("Recharge")) {
+                displayKey = LanguageUtils.getText("cat.recharge");
+            } else {
+                displayKey = LanguageUtils.getText("cat.other") + " (" + rawKey + ")";
             }
-        } catch (Exception e) {}
+
+            pieDataset.setValue(displayKey, entry.getValue());
+        }
     }
 
     private void styleBarChart(JFreeChart chart) {
-        // 设置中文字体，防止乱码
-        Font font = new Font("微软雅黑", Font.PLAIN, 12);
-        chart.getTitle().setFont(new Font("微软雅黑", Font.BOLD, 18));
-        chart.getCategoryPlot().getDomainAxis().setLabelFont(font);
-        chart.getCategoryPlot().getDomainAxis().setTickLabelFont(font);
-        chart.getCategoryPlot().getRangeAxis().setLabelFont(font);
-        chart.getCategoryPlot().getRangeAxis().setTickLabelFont(font);
+        try {
+            chart.getTitle().setFont(StyleUtils.FONT_TITLE);
+            CategoryPlot plot = chart.getCategoryPlot();
 
-        chart.setBackgroundPaint(Color.WHITE);
-        CategoryPlot plot = chart.getCategoryPlot();
-        plot.setBackgroundPaint(Color.WHITE);
-        plot.setRangeGridlinePaint(new Color(220, 220, 220));
-        plot.setOutlineVisible(false);
-        BarRenderer renderer = (BarRenderer) plot.getRenderer();
-        renderer.setBarPainter(new StandardBarPainter());
-        renderer.setSeriesPaint(0, new Color(108, 92, 231));
-        renderer.setDrawBarOutline(false);
-        renderer.setShadowVisible(false);
+            // 确保坐标轴也使用全局字体，支持中文
+            Font axisFont = new Font(StyleUtils.FONT_NAME, Font.BOLD, 12);
+            Font labelFont = new Font(StyleUtils.FONT_NAME, Font.PLAIN, 12);
+
+            plot.getDomainAxis().setLabelFont(axisFont);
+            plot.getDomainAxis().setTickLabelFont(labelFont);
+            plot.getRangeAxis().setLabelFont(axisFont);
+            plot.getRangeAxis().setTickLabelFont(labelFont);
+
+            LegendTitle legend = chart.getLegend();
+            if (legend != null) legend.setItemFont(labelFont);
+
+            chart.setBackgroundPaint(Color.WHITE);
+            plot.setBackgroundPaint(new Color(250, 250, 250));
+            plot.setRangeGridlinePaint(new Color(220, 220, 220));
+            plot.setOutlineVisible(false);
+
+            BarRenderer renderer = (BarRenderer) plot.getRenderer();
+            renderer.setBarPainter(new StandardBarPainter());
+            renderer.setSeriesPaint(0, new Color(108, 92, 231));
+            renderer.setDrawBarOutline(false);
+            renderer.setShadowVisible(false);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     private void stylePieChart(JFreeChart chart) {
-        Font font = new Font("微软雅黑", Font.PLAIN, 12);
-        chart.getTitle().setFont(new Font("微软雅黑", Font.BOLD, 18));
-        chart.getLegend().setItemFont(font);
+        try {
+            chart.getTitle().setFont(StyleUtils.FONT_TITLE);
+            PiePlot plot = (PiePlot) chart.getPlot();
 
-        chart.setBackgroundPaint(Color.WHITE);
-        PiePlot plot = (PiePlot) chart.getPlot();
-        plot.setLabelFont(font);
-        plot.setBackgroundPaint(Color.WHITE);
-        plot.setOutlineVisible(false);
+            // 饼图标签字体
+            plot.setLabelFont(new Font(StyleUtils.FONT_NAME, Font.PLAIN, 12));
+
+            LegendTitle legend = chart.getLegend();
+            if (legend != null) legend.setItemFont(new Font(StyleUtils.FONT_NAME, Font.PLAIN, 12));
+
+            chart.setBackgroundPaint(Color.WHITE);
+            plot.setBackgroundPaint(Color.WHITE);
+            plot.setOutlineVisible(false);
+            plot.setShadowPaint(null);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 }

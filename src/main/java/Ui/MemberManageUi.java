@@ -28,7 +28,7 @@ public class MemberManageUi extends JFrame {
         StyleUtils.initGlobalTheme();
 
         // 设置标题 (从词典获取)
-        setTitle("👥 " + LanguageUtils.getText("mm.title"));
+        setTitle(LanguageUtils.getText("mm.title"));
         setSize(1000, 650);
         setLocationRelativeTo(null);
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);

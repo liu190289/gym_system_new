@@ -31,7 +31,7 @@ public class ShopUi extends JFrame {
         this.shopService = new ShopService();
         this.productService = new ProductService();
         StyleUtils.initGlobalTheme();
-        setTitle("🛒 " + LanguageUtils.getText("shop.title"));
+        setTitle(LanguageUtils.getText("shop.title"));
         setSize(1100, 700);
         setLocationRelativeTo(null);
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
@@ -125,13 +125,13 @@ public class ShopUi extends JFrame {
         checkoutPanel.add(btnRow);
 
         totalLabel = new JLabel(LanguageUtils.getText("shop.total") + "¥ 0.00", SwingConstants.CENTER);
-        totalLabel.setFont(new Font("Arial", Font.BOLD, 22));
+        totalLabel.setFont(StyleUtils.FONT_TITLE_BIG);
         totalLabel.setForeground(StyleUtils.COLOR_DANGER);
         checkoutPanel.add(totalLabel);
 
         JButton checkoutBtn = new JButton("✨ " + LanguageUtils.getText("shop.checkout"));
         StyleUtils.styleButton(checkoutBtn, StyleUtils.COLOR_SUCCESS);
-        checkoutBtn.setFont(new Font("微软雅黑", Font.BOLD, 18));
+        checkoutBtn.setFont(StyleUtils.FONT_TITLE);
         checkoutBtn.addActionListener(e -> performCheckout());
         checkoutPanel.add(checkoutBtn);
         rightPanel.add(checkoutPanel, BorderLayout.SOUTH);

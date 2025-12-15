@@ -19,7 +19,7 @@ public class LoginUi extends JFrame implements MouseListener {
     public void LoginJFrame() {
         StyleUtils.initGlobalTheme();
         this.setSize(900, 600);
-        this.setTitle("💪 " + LanguageUtils.getText("app.title") + " - " + LanguageUtils.getText("login.title"));
+        this.setTitle(LanguageUtils.getText("app.title") + " - " + LanguageUtils.getText("login.title"));
         this.setLocationRelativeTo(null);
         this.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
         this.setLayout(null);

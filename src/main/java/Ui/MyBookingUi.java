@@ -22,7 +22,7 @@ public class MyBookingUi extends JFrame {
         this.member = member;
         this.bookingService = new BookingService();
         StyleUtils.initGlobalTheme();
-        setTitle("📋 " + LanguageUtils.getText("mybook.title"));
+        setTitle(LanguageUtils.getText("mybook.title"));
         setSize(900, 600);
         setLocationRelativeTo(null);
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
