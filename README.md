@@ -5,6 +5,8 @@
 [![Maven](https://img.shields.io/badge/Maven-3.8+-red)](https://maven.apache.org/)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 
+**English README**: [README_EN.md](README_EN.md)
+
 一个基于 Java Swing 和 MySQL 开发的现代化健身房综合管理系统。系统采用分层架构 (DAO/Service/UI)，界面美观（FlatLaf 主题），功能覆盖会员服务、前台运营、教练排课及后台管理等全业务流程。
 
 ---
@@ -85,17 +87,21 @@
 
 ## 🔑 默认测试账号
 
-系统初始化后，可使用以下账号登录（密码统一为 **123456**）：
+系统初始化并导入 `gym_system_reset_v2.sql` 后，可使用以下账号登录（明文密码统一为 **123456**；数据库中存储为哈希值，程序会对输入密码进行同样的哈希后比对）：
 
 | 角色       | 账号 (Username) | 密码     | 权限说明                      |
 | :--------- | :-------------- | :------- | :---------------------------- |
 | **管理员** | `admin`         | `123456` | 最高权限，可管理员工和报表    |
 | **前台**   | `alice`         | `123456` | 负责日常运营、收银、开卡      |
-| **教练**   | `bob`           | `123456` | 负责瑜伽/普拉提课程点名       |
-| **会员**   | `zhangsan`      | `123456` | 余额500元，有年卡，有预约记录 |
-| **会员**   | `lisi`          | `123456` | 余额0元，月卡已过期           |
+| **教练**   | `bob`           | `123456` | 教练角色示例账号              |
+| **会员**   | `johnsmith`     | `123456` | 会员示例账号（member_id=1）   |
+| **会员**   | `sarahj`        | `123456` | 会员示例账号（member_id=2）   |
 
 > 💡 **提示**：员工登录请选择 "Employee / Staff"，会员登录请选择 "Member"。
+>
+> ✅ **更多样例账号**：`carol` / `david` / `emma`（员工），`mbrown` / `emilyd` / `rwilson` / `jentaylor` / `wanderson` / `lisam` / `jesswhite`（会员）。
+>
+> ⚠️ **注意**：脚本中 `jthomas` 的账号状态为 `inactive`，按当前登录逻辑（仅允许 `status='active'`）将无法登录。
 
 ---
 
