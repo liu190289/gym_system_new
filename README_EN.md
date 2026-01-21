@@ -69,7 +69,7 @@ The system supports four roles with dedicated business views:
 ### 2. Database Setup
 1. Create a database named `gym_system` in MySQL.
 2. Locate the `database` folder under the project directory.
-3. Run **`gym_system_reset_v2.sql`**.
+3. Run **`init.sql`**.
    * This script creates tables and inserts sample data (including course times and member balances).
 4. Check the DB config in `src/main/java/utils/DBUtil.java`:
 
@@ -88,7 +88,7 @@ private static final String PASSWORD = "your_password"; // your DB password
 
 ## 🔑 Default Test Accounts
 
-After importing `gym_system_reset_v2.sql`, you can log in with the following accounts (the plaintext password is **123456**; the database stores a hashed value, and the application hashes your input before comparison):
+After importing `init.sql`, you can log in with the following accounts (the plaintext password is **123456**; the database stores a hashed value, and the application hashes your input before comparison):
 
 | Role | Username | Password | Notes |
 | :--- | :--- | :--- | :--- |
